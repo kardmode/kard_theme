@@ -1,0 +1,18 @@
+include MANIFEST.in
+include requirements.txt
+include *.json
+include *.md
+include *.py
+include *.txt
+recursive-include kard_theme *.css
+recursive-include kard_theme *.csv
+recursive-include kard_theme *.html
+recursive-include kard_theme *.ico
+recursive-include kard_theme *.js
+recursive-include kard_theme *.json
+recursive-include kard_theme *.md
+recursive-include kard_theme *.png
+recursive-include kard_theme *.py
+recursive-include kard_theme *.svg
+recursive-include kard_theme *.txt
+recursive-exclude kard_theme *.pyc

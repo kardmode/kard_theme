@@ -1,0 +1,70 @@
+{
+ "beta": 1,
+ "creation": "2019-08-14 07:29:29.143437",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "enable_theme",
+  "hide_default_desktop",
+  "style",
+  "location",
+  "initialize_standard_icons",
+  "clear_user_icons"
+ ],
+ "fields": [
+  {
+   "default": "0",
+   "fieldname": "enable_theme",
+   "fieldtype": "Check",
+   "label": "Enable Theme"
+  },
+  {
+   "default": "0",
+   "fieldname": "hide_default_desktop",
+   "fieldtype": "Check",
+   "label": "Hide Default Desktop"
+  },
+  {
+   "fieldname": "style",
+   "fieldtype": "Select",
+   "label": "Style",
+   "options": "Grid\nHorizontal"
+  },
+  {
+   "fieldname": "location",
+   "fieldtype": "Select",
+   "label": "Location",
+   "options": "Top\nBottom"
+  },
+  {
+   "fieldname": "initialize_standard_icons",
+   "fieldtype": "Button",
+   "label": "Initialize Standard Icons"
+  },
+  {
+   "fieldname": "clear_user_icons",
+   "fieldtype": "Button",
+   "label": "Clear User Icons"
+  }
+ ],
+ "issingle": 1,
+ "modified": "2019-08-14 08:59:45.122217",
+ "modified_by": "Administrator",
+ "module": "Kard Theme",
+ "name": "Kard Theme Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "quick_entry": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}
