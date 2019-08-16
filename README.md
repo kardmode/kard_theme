@@ -1,6 +1,9 @@
 ## Kard Theme
 
-Custom Frappe Theme
+Custom Frappe Theme.
+Adds Desktop Icons To Frappe V12.
+
+
 
 #### License
 
