@@ -18,37 +18,49 @@ class KardThemeSettings(Document):
 		
 			
 		for icon in user_icons:
-			frappe.errprint(icon.name)
 			frappe.delete_doc('Desktop Icon', icon.name, ignore_missing=True)
 
 		
 	def initialize_standard_icons(self):
-		fields = ['name','module_name', 'hidden', 'label', 'link', 'type', 'icon', 'color', 'description', 'category',
-			'_doctype', '_report', 'idx', 'force_show', 'reverse', 'custom', 'standard', 'blocked']
+		from frappe.desk.doctype.desktop_icon.desktop_icon import sync_desktop_icons
+	
+		frappe.db.sql('delete from `tabDesktop Icon` where standard=1')
+		
+		sync_desktop_icons()
+	
+		# fields = ['name','module_name', 'hidden', 'label', 'link', 'type', 'icon', 'color', 'description', 'category',
+			# '_doctype', '_report', 'idx', 'force_show', 'reverse', 'custom', 'standard', 'blocked']
 
 	
 		
-		standard_icons = frappe.db.get_all('Desktop Icon',
-			fields=fields, filters={'standard': 1})
+		# standard_icons = frappe.db.get_all('Desktop Icon',
+			# fields=fields, filters={'standard': 1})
 			
-		for icon in standard_icons:
-			frappe.delete_doc('Desktop Icon', icon.name, ignore_missing=True)
+		# for icon in standard_icons:
+			# frappe.delete_doc('Desktop Icon', icon.name, ignore_missing=True)
 
 		
-		modules = frappe.db.get_all('Module Def',
-			fields=['name','app_name'], filters={})
+		# modules = frappe.db.get_all('Module Def',
+			# fields=['name','app_name'], filters={})
 			
 		
-		for m in modules:
-			new_icon = frappe.get_doc({
-				'doctype': 'Desktop Icon',
-				'module_name': m.name,
-				'label': m.name,
-				'standard': 1,
-				'app': m.app_name,
-				'color': 'grey',
-				'icon': 'octicon octicon-file-directory',
-				'idx': 0,
-			}).insert()	
+		# for m in modules:
+			# new_icon = frappe.get_doc({
+				# 'doctype': 'Desktop Icon',
+				# 'module_name': m.name,
+				# 'label': m.name,
+				# 'standard': 1,
+				# 'app': m.app_name,
+				# 'color': 'grey',
+				# 'icon': 'octicon octicon-file-directory',
+				# 'idx': 0,
+			# }).insert()
+			
+	def sync_standard_icons(self):
+		from frappe.desk.doctype.desktop_icon.desktop_icon import sync_desktop_icons
+	
+		frappe.db.sql('delete from `tabDesktop Icon` where standard=1')
+		
+		sync_desktop_icons()
 			
 

@@ -1,16 +1,32 @@
 @media (max-width: 767px)
 {
-#desktop-icons {
-    /* max-width: 320px; */
+	#desktop-icons {
+		/* max-width: 320px; */
+	}
+	
+	#desktop-icons-header {
+		/* max-width: 320px; */
+	}
 }
-}
-#desktop-icons {
+
+#desktop-icons-header {
     /* padding-top: 15px; */
     /* padding-bottom: 30px; */
     /* max-width: 970px; */
     margin-left: auto;
     margin-right: auto;
 	margin-top:60px;
+	max-width:85vw;
+	text-align:right;
+}
+
+#desktop-icons {
+    /* padding-top: 15px; */
+    /* padding-bottom: 30px; */
+    /* max-width: 970px; */
+    margin-left: auto;
+    margin-right: auto;
+	margin-top:20px;
 	max-width:85vw;
 }
 

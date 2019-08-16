@@ -2,10 +2,7 @@ function load_desktop_shortcuts() {
 	
 	
 	let page_desktop = document.getElementById('page-desktop');
-	
-	
-	
-					
+						
 	
 	frappe.call({
 		method: "kard_theme.kard_theme.utils.get_theme_info",
@@ -24,7 +21,6 @@ function load_desktop_shortcuts() {
 				// container.setAttribute("class", "container");
 				
 			
-				
 				
 				
 				
@@ -52,6 +48,7 @@ function load_desktop_shortcuts() {
 				{
 					desktop_icons_id.innerHTML = "";
 				}
+				
 				
 				let fields = response.message[0];
 				
@@ -116,15 +113,20 @@ function load_desktop_shortcuts() {
 					
 				}
 				
+				
+				let desktop_icons_header = document.createElement('div');
+				desktop_icons_header.setAttribute("id", "desktop-icons-header");
+				desktop_icons_header.innerHTML = '<a class="btn-customize-desktop text-muted text-medium">Show / Hide Icons</a>';
 				if(settings.location == "Top")
 				{
-					// page_desktop.innerHTML = desktop_icons_id + page_desktop.innerHTML;
 					page_desktop.prepend(desktop_icons_id);	
+					page_desktop.prepend(desktop_icons_header);	
+						
 				}
 				else if(settings.location == "Bottom")
 				{
+					page_desktop.appendChild(desktop_icons_header);	
 					page_desktop.appendChild(desktop_icons_id);	
-					// page_desktop.innerHTML =  page_desktop.innerHTML + desktop_icons_id;
 
 				}
 				

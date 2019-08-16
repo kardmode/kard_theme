@@ -67,5 +67,36 @@ frappe.ui.form.on('Kard Theme Settings', {
 				}
 			}
 		);
-	}
+	},
+	sync_standard_icons: function(frm) {
+		frappe.confirm(__('This will update standard icons from module definitions. Do you want to proceed?'),
+			function() {
+				frappe.call({
+					method: 'sync_standard_icons',
+					args: {},
+					callback: function(r) {
+					
+					
+						if (r.message)
+						{	
+						
+						
+							
+							
+						}
+						
+					},
+					doc: frm.doc,
+					freeze: true,
+					freeze_message: 'Initializing Standard Icons...'
+				});
+			},
+			function() {
+				if(frappe.dom.freeze_count) {
+					frappe.dom.unfreeze();
+					frm.events.refresh(frm);
+				}
+			}
+		);
+	},
 });
