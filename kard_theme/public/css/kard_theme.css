@@ -64,44 +64,76 @@
 	
 
 
-/* #page-desktop{ position: static} */
-/* #body_div{ background: #FFFFFF} */
-/* .main-section{ background: #222d32} */
-/* .page-head{ position: static} */
-/* .page-content{ margin-top:0} */
-/* .navbar-brand{ padding: 0 15px 0 15px; line-height: 50px; height: 50px;} */
-/* #navbar-breadcrumbs > li > a{ padding: 11px 15px 15px 0px} */
-/* .navbar-form{ margin-top:10px;} */
-/* .navbar .dropdown-toggle{padding:13px 15px} */
-/* header .dropdown-help{display:none} */
-/* .main-header .sidebar-toggle{text-decoration: none;} */
-/* .page-container{margin-top:0;} */
-/*
-.navbar-brand{height: 50px; line-height: 30px}
-.main-header .logo { height: 40px}
-.main-header .sidebar-toggle{ line-height: 40px;}
-.main-header .navbar{min-height: 40px;}
-*/
-/* #page-desktop{ background-color:#FFFFFF !important} */
-/* .main-header .logo .logo-lg{ */
-    /* background: #367fa9 url(/assets/bdtheme/images/logo_bdoop.png) center no-repeat;  */
-    /* background-size: auto 48px; */
-    /* text-indent:-99em; */
-/* } */
-/* .main-header .logo .logo-mini{ */
-    /* background: #367fa9 url(/assets/bdtheme/images/bp-ico-32.png) center no-repeat;  */
-    /* background-size: auto 38px; */
-    /* text-indent:-99em; */
-/* } */
-/* .layout-side-section{ font-size: 13px;} */
-/* .case-label{ color:#000; text-shadow:none; font-size: 95%; font-weight:normal} */
-/* h6.uppercase, .h6.uppercase{ color: #666666;} */
-/* .control-label, .grid-heading-row{ color: #666666;} */
+a.module-link{
+	padding:0 10px !important;
+	/* margin:5px 0; */
+}
 
-/* @media (max-width: 767px) { */
-    /* .skin-blue .main-header .navbar .dropdown-menu li a { */
-      /* color: #333; */
-    /* } */
-  /* } */
-/* }   */
+.module-sidebar-item
+{
+	margin: 0 !important;
+}
 
+
+
+.sidebar-icon,.moduleview-icon {
+	vertical-align:middle;
+
+	display: inline-block;
+	margin: 10px;
+	text-align: center;
+	/* border-radius: 8px;*/
+	/*  cursor: pointer;*/
+	/*box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.15); */
+	background-color:#fff0 !important;
+}
+
+.sidebar-icon .inner, .sidebar-icon i,
+.moduleview-icon .inner, .moduleview-icon i {
+	font-size: 32px;
+    min-width: 32px;
+   color: #333;
+    display: inline-block;
+    transition: 0.2s;
+    -webkit-transition: 0.2s;
+    text-shadow: -1px 1px 5px rgba(0, 0, 0, 0.15);
+
+	
+
+}
+
+div#desktop-sidebar
+{
+	padding-top:25px;
+	    max-height: 99vh;
+    overflow-y: scroll;
+}
+}
+
+.sidebar-icon .inner {
+  line-height: 32px;
+  font-weight: bold;
+}
+
+a.module-link.active, a.module-link:hover{
+	background-color: #eee !important;
+	border-radius:0px !important;
+}
+
+
+@media (max-width: 991px)
+{
+	body[data-sidebar="0"] .toggle-sidebar {
+		display: block !important;
+	}
+
+}
+
+@media (max-width: 991px)
+{
+	body[data-route=""] .toggle-sidebar, body[data-route="desktop"] .toggle-sidebar {
+    display: block !important;
+	}
+
+
+}

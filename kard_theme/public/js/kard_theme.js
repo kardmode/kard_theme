@@ -1,394 +1,246 @@
-function load_desktop_shortcuts() {
-	
-	var wiggling = false;
-	let page_desktop = document.getElementById('page-desktop');
-						
-	
-	frappe.call({
-		method: "kard_theme.kard_theme.utils.get_theme_info",
-		callback: function(response) {
-			
-			let settings = response.message[1];
-				
-			
-			if(!settings.enable_theme)
-					return;
-			
-			if (page_desktop)
-			{
-				
-				var desktop_icons_id = document.getElementById('desktop-icons');
-				if (!desktop_icons_id)
-				{
-					desktop_icons_id = document.createElement('div');
-					desktop_icons_id.setAttribute("id", "desktop-icons");
-					
-					if(settings.style == "Grid")
-					{
-						desktop_icons_id.setAttribute("class", "icon-grid");
+frappe.provide('frappe.desktop');
 
-					}
-					else if(settings.style == "Horizontal")
-					{
-						desktop_icons_id.setAttribute("class", "icon-horizontal");
-					}
-					
-					
-					
-						
-				}
-				else
-				{
-					desktop_icons_id.innerHTML = "";
-				}
-				
-				
-				let fields = response.message[0];
-				
-				fields.forEach(item => {
-					if (item.hidden === 1 || item.blocked ===1) { return; }
-					if(!item.route) {
-						if(item.link) {
-							item.route=strip(item.link, "#");
-						}
-						else if(item.type==="doctype") {
-							if(frappe.model.is_single(item._doctype)) {
-								item.route = 'Form/' + item._doctype;
-							} else {
-								item.route="List/" + item._doctype;
-							}
-						}
-						else if(item.type==="query-report") {
-							item.route="query-report/" + item.module_name;
-						}
-						else if(item.type==="report") {
-							item.route="List/" + item.doctype + "/Report/" + item.module_name;
-						}
-						else if(item.type==="page") {
-							item.route=item.module_name;
-						}
-						else if(item.type==="module") {
-							item.route="modules/" + item.module_name;
-						}
-					}
-					
-				
-					
-					
-					let label_wrapper = '<div class="case-wrapper" title="'+item.label+'" data-name="'+item.module_name+'" data-link="'+item.route+'">'
-					+ '<div class="app-icon" style="background-color:'+ item.color +'"><i class="'+item.icon+'"></i></div>'
-					+ '<div class="case-label ellipsis">' 
-					+ '<div class="circle" data-doctype="" style="display: none;"><span class="circle-text"></span></div>'
-					+ '<span class="case-label-text">' + item.label + '</span>' 
-					+ '</div>'
-					+ '</div>'
-									
-					desktop_icons_id.innerHTML = desktop_icons_id.innerHTML + label_wrapper;
-
-
-				})
-				
-				
-				if(settings.hide_default_desktop)
-				{
-					let default_desktop = document.getElementsByClassName('modules-page-container');
-					// page_desktop.innerHTML = "";
-					
-					if(default_desktop)
-					{
-						default_desktop[0].innerHTML = '';
-
-					}
-					
-				}
-				else
-				{
-					
-				}
-				
-				
-				if(settings.location == "Top")
-				{
-					page_desktop.prepend(desktop_icons_id);	
-						
-				}
-				else if(settings.location == "Bottom")
-				{
-					page_desktop.appendChild(desktop_icons_id);	
-
-				}
-				
-				setup_module_click();
-				make_sortable();
-			
-			}
-			
-			
-			
-			function setup_module_click() {
-				wiggling = false;
-				
-				$( ".app-icon" ).bind( "click", function() {
-					if ( !wiggling ) {
-						open_module($(this).parent());
-					}
-				});
-				
-				$( ".circle" ).bind( "click", function() {
-					var doctype = $(this).attr('data-doctype');
-					if(doctype) {
-						frappe.ui.notifications.show_open_count_list(doctype);
-					}
-				});
-
-				/* desktop_icons_id.on("click", ".app-icon", function() {
-					if ( !frappe.desktop.wiggling ) {
-						frappe.desktop.open_module($(this).parent());
-					}
-				}); */
-				
-				/* desktop_icons_id.on("click", ".circle", function() {
-					var doctype = $(this).attr('data-doctype');
-					if(doctype) {
-						frappe.ui.notifications.show_open_count_list(doctype);
-					}
-				}); */
-
-				setup_wiggle();
-			};
-			
-			function open_module(parent) {
-				var link = parent.attr("data-link");
-				if(link) {
-					if(link.indexOf('javascript:')===0) {
-						eval(link.substr(11));
-					} else if(link.substr(0, 1)==="/" || link.substr(0, 4)==="http") {
-						window.open(link, "_blank");
-					} else {
-						frappe.set_route(link);
-					}
-					return false;
-				} else {
-					var module = frappe.get_module(parent.attr("data-name"));
-					if (module && module.onclick) {
-						module.onclick();
-						return false;
-					}
-				}
-			};
-			
-			function setup_wiggle() {
-				// Wiggle, Wiggle, Wiggle.
-				const DURATION_LONG_PRESS = 1000;
-
-				var   timer_id      = 0;
-				const $cases        = $('#desktop-icons').find('.case-wrapper');
-				const $icons        = $('#desktop-icons').find('.app-icon');
-				const $notis        = $($('#desktop-icons').find('.circle').toArray().filter((object) => {
-					// This hack is so bad, I should punch myself.
-					// Seriously, punch yourself.
-					const text      = $(object).find('.circle-text').html();
-
-					return text;
-				}));
-
-				const clearWiggle   = () => {
-					const $closes   = $cases.find('.module-remove');
-					$closes.hide();
-					$notis.show();
-
-					$icons.removeClass('wiggle');
-
-					wiggling = false;
-				};
-
-				$('#desktop-icons').on('mousedown', '.app-icon', () => {
-					timer_id     = setTimeout(() => {
-						wiggling = true;
-						// hide all notifications.
-						$notis.hide();
-
-						$cases.each((i) => {
-							const $case    = $($cases[i]);
-							const template =
-							`
-								<div class="circle module-remove" style="background-color:#E0E0E0; color:#212121">
-									<div class="circle-text">
-										<b>
-											&times
-										</b>
-									</div>
-								</div>
-							`;
-
-							$case.append(template);
-							const $close  = $case.find('.module-remove');
-							const name    = $case.attr('title');
-							$close.click(() => {
-								// good enough to create dynamic dialogs?
-								const dialog = new frappe.ui.Dialog({
-									title: __(`Hide ${name}?`)
-								});
-								dialog.set_primary_action(__('Hide'), () => {
-									frappe.call({
-										method: 'frappe.desk.doctype.desktop_icon.desktop_icon.hide',
-										args: { name: name },
-										freeze: true,
-										callback: (response) =>
-										{
-											if ( response.message ) {
-												location.reload();
-											}
-										}
-									})
-
-									dialog.hide();
-
-									clearWiggle();
-								});
-								// Hacks, Hacks and Hacks.
-								var $cancel = dialog.get_close_btn();
-								$cancel.click(() => {
-									clearWiggle();
-								});
-								$cancel.html(__(`Cancel`));
-
-								dialog.show();
-							});
-						});
-
-						$icons.addClass('wiggle');
-
-					}, DURATION_LONG_PRESS);
-				});
-				$('#desktop-icons').on('mouseup mouseleave', '.app-icon', () => {
-					clearTimeout(timer_id);
-				});
-
-				// also stop wiggling if clicked elsewhere.
-				$('body').click((event) => {
-					if ( wiggling ) {
-						const $target = $(event.target);
-						// our target shouldn't be .app-icons or .close
-						const $parent = $target.parents('.case-wrapper');
-						if ( $parent.length == 0 )
-							clearWiggle();
-					}
-				});
-				// end wiggle
-			};
-			
-			function make_sortable() {
-				if (frappe.dom.is_touchscreen()) {
-					return;
-				}
-
-				new Sortable($("#desktop-icons").get(0), {
-					animation: 150,
-					onUpdate: function(event) {
-						var new_order = [];
-						$("#desktop-icons .case-wrapper").each(function(i, e) {
-							new_order.push($(this).attr("data-name"));
-						});
-						
-
-						frappe.call({
-							method: 'frappe.desk.doctype.desktop_icon.desktop_icon.set_order',
-							args: {
-								'new_order': new_order,
-								'user': frappe.session.user
-							},
-							quiet: true
-						});
-					}
-				});
-			};
-
-
-		}
-	});
-			
-	
-};
- 
- 
- $(window).on('hashchange', function() {
-	load_desktop_shortcuts();
+$(window).on('hashchange', function() {
+	// load_desktop_shortcuts();
+	var wrapper = document.getElementById('page-desktop');
+	if(wrapper){
+		frappe.desktop.load_shortcuts(wrapper);		
+	}
 });
- 
  
 $(document).ready(function() {
-	// $('.modules-page-container').prepend('sdfsdf');
-	//$('.navbar-header').prepend(frappe.render_template("sidebar-toggle"));
-
-	load_desktop_shortcuts();
 	
-	
-	
-	// $('.modules-page-container').prepend(frappe.render_template("desktop_icons_id"));
-	// $('header').addClass('main-header');
-	// $('header .navbar').removeClass('navbar-fixed-top');
-	// $('body').addClass('skin-blue sidebar-mini sidebar-collapse');	
-	// $('#body_div').addClass('content-wrapper');	
-	
+	var wrapper = document.getElementById('page-desktop');
+	// var me = window;
+	if(wrapper){
+		frappe.desktop.load_shortcuts(wrapper);		
+	}
+		
 });
 
-frappe.add_to_desktop = function(label, doctype, report) {
-	frappe.call({
-		method: 'frappe.desk.doctype.desktop_icon.desktop_icon.add_user_icon',
-		args: {
-			'link': frappe.get_route_str(),
-			'label': label,
-			'type': 'link',
-			'_doctype': doctype,
-			'_report': report
-		},
-		callback: function(r) {
-			if(r.message) {
-				frappe.show_alert(__("Added"));
-			}
-		}
-	});
-};
 
+ 
+$.extend(frappe.desktop, {
+	load_shortcuts: function(wrapper) {
+		
+		var me = this;
+		
+		var container_wrapper = $(wrapper).find('.container')[0];
 
-/* $.extend(this, {
-	refresh: function(wrapper) {
 		if (wrapper) {
-			this.wrapper = $(wrapper);
+			this.page_wrapper = $(wrapper);
 		}
+		
 
-		this.render();
-		this.make_sortable();
+
+		if (container_wrapper) {
+			this.wrapper = $(container_wrapper);
+		}
+		
+
+		
+		frappe.call({
+				method: "kard_theme.kard_theme.utils.get_theme_info",
+				callback: function(response) {
+					me.render(response);
+					me.sort_inst = me.make_sortable();
+					me.sortableDisable();
+				}
+			});
+		
 	},
 
-	render: function() {
+	render: function(response) {
 		var me = this;
 		frappe.utils.set_title(__("Desktop"));
 
-		var template = frappe.list_desktop ? "desktop_list_view" : "desktop_icon_grid";
-
-		var all_icons = frappe.get_desktop_icons();
+		let settings = response.message[1];
+			
+		if(!settings.enable_theme)
+			return;
 		
-		frappe.desktop.wrapper.html(frappe.render_template(template, {
-			// all visible icons
-			desktop_items: all_icons,
-		}));
+		var new_container_div = document.createElement('div');
+		new_container_div.setAttribute("id", "layout-main-section");
+		me.wrapper.prepend(new_container_div);
 
-		frappe.desktop.setup_module_click();
+		
+		let sidebar_wrapper = document.getElementById('desktop-sidebar');
+		
+		if(settings.enable_module_sidebar)
+		{
+			
+			if (sidebar_wrapper)
+				sidebar_wrapper.innerHTML = "";
+			
+			let sidebar_html = '<div id="desktop-sidebar" class="col-md-3 layout-side-section layout-left">'
+			+ '<ul class="module-sidebar-nav overlay-sidebar nav nav-pills nav-stacked">'
+			
+			let modules = response.message[2];
+			modules.forEach(m => {
+				if (m.hidden === 1 || m.blocked ===1) { return; }
+				if(!m.route) {
+					if(m.link) {
+						m.route=strip(m.link, "#");
+					}
+					else if(m.type==="doctype") {
+						if(frappe.model.is_single(m._doctype)) {
+							m.route = 'Form/' + m._doctype;
+						} else {
+							m.route="List/" + m._doctype;
+						}
+					}
+					else if(m.type==="query-report") {
+						m.route="query-report/" + item.module_name;
+					}
+					else if(m.type==="report") {
+						m.route="List/" + m.doctype + "/Report/" + m.module_name;
+					}
+					else if(m.type==="page") {
+						m.route=m.module_name;
+					}
+					else if(m.type==="module") {
+						m.route="#modules/" + m.module_name;
+					}
+				}
+				let module_link = '<li class="strong module-sidebar-item">'
+				+ '<a class="module-link" data-name="'+ m.module_name + '" href="'+ m.route + '">'
+				+ '<i class="fa fa-chevron-right pull-right" style="display: none;"></i>'
+				+ '<span class="sidebar-icon" style="background-color: '+ m.color + '"><i class="'+ m.icon + '"></i></span>'
+				+ '<span class="ellipsis">'+ m.label + '</span>'
+				+ '</a>'
+				+ '</li>';
+				sidebar_html = sidebar_html + module_link;
+				
+			});
+			
+			sidebar_html = sidebar_html + '</ul></div>';
+			me.wrapper.prepend(sidebar_html);
+			$(new_container_div).addClass("col-md-9");
+		}
+		else
+		{
+			if (sidebar_wrapper)
+				sidebar_wrapper.parentNode.removeChild(sidebar_wrapper);
+
+			$(new_container_div).removeClass("col-md-9");
+
+		}
+		
+		
+		
+		
+		let fields = response.message[0];
+		
+		var desktop_icons_id = document.getElementById('desktop-icons');
+		if (!desktop_icons_id)
+		{
+			desktop_icons_id = document.createElement('div');
+			desktop_icons_id.setAttribute("id", "desktop-icons");
+		}
+		else
+		{
+			desktop_icons_id.innerHTML = "";
+		}
+		
+		if(settings.style == "Grid")
+		{
+			desktop_icons_id.setAttribute("class", "icon-grid");
+		}
+		else if(settings.style == "Horizontal")
+		{
+			desktop_icons_id.setAttribute("class", "icon-horizontal");
+		}
+					
+						
+		fields.forEach(item => {
+			if (item.hidden === 1 || item.blocked ===1) { return; }
+			if(!item.route) {
+				if(item.link) {
+					item.route=strip(item.link, "#");
+				}
+				else if(item.type==="doctype") {
+					if(frappe.model.is_single(item._doctype)) {
+						item.route = 'Form/' + item._doctype;
+					} else {
+						item.route="List/" + item._doctype;
+					}
+				}
+				else if(item.type==="query-report") {
+					item.route="query-report/" + item.module_name;
+				}
+				else if(item.type==="report") {
+					item.route="List/" + item.doctype + "/Report/" + item.module_name;
+				}
+				else if(item.type==="page") {
+					item.route=item.module_name;
+				}
+				else if(item.type==="module") {
+					item.route="modules/" + item.module_name;
+				}
+			}
+			
+		
+			
+			
+			let label_wrapper = '<div class="case-wrapper" title="'+item.label+'" data-name="'+item.module_name+'" data-link="'+item.route+'">'
+			+ '<div class="app-icon" style="background-color:'+ item.color +'"><i class="'+item.icon+'"></i></div>'
+			+ '<div class="case-label ellipsis">' 
+			+ '<div class="circle" data-doctype="" style="display: none;"><span class="circle-text"></span></div>'
+			+ '<span class="case-label-text">' + item.label + '</span>' 
+			+ '</div>'
+			+ '</div>';
+							
+			desktop_icons_id.innerHTML = desktop_icons_id.innerHTML + label_wrapper;
+
+		})
+		
+		let default_desktop = document.getElementsByClassName('modules-page-container');
+		
+		if(default_desktop)
+		{
+			
+			if(settings.hide_default_desktop)
+			{
+				default_desktop[0].parentNode.removeChild(default_desktop[0]);
+			}
+			else
+			{
+				// insert wrapper before el in the DOM tree
+				// el.parentNode.insertBefore(wrapper, el);
+
+				// move el into wrapper
+				new_container_div.appendChild(default_desktop[0]);
+			}
+		}
+		
+		
+		
+		if(settings.location == "Top")
+		{
+			new_container_div.prepend(desktop_icons_id);	
+		}
+		else if(settings.location == "Bottom")
+		{
+			new_container_div.appendChild(desktop_icons_id);	
+		}
+		
+
+		
+		me.setup_module_click();
 
 		// notifications
-		frappe.desktop.show_pending_notifications();
+		/* me.show_pending_notifications();
 		$(document).on("notification-update", function() {
 			me.show_pending_notifications();
 		});
 
-		$(document).trigger("desktop-render");
+		$(document).trigger("desktop-render"); */
 
 	},
 
 	render_help_messages: function(help_messages) {
-		var wrapper = frappe.desktop.wrapper.find('.help-message-wrapper');
+		var me = this;
+		var wrapper = me.wrapper.find('.help-message-wrapper');
 		var $help_messages = wrapper.find('.help-messages');
 
 		var set_current_message = function(idx) {
@@ -437,37 +289,39 @@ frappe.add_to_desktop = function(label, doctype, report) {
 	},
 
 	setup_module_click: function() {
-		frappe.desktop.wiggling = false;
+		var me = this;
+		me.wiggling = false;
 
 		if(frappe.list_desktop) {
-			frappe.desktop.wrapper.on("click", ".desktop-list-item", function() {
-				frappe.desktop.open_module($(this));
+			me.wrapper.on("click", ".desktop-list-item", function() {
+				me.open_module($(this));
 			});
 		} else {
-			frappe.desktop.wrapper.on("click", ".app-icon, .app-icon-svg", function() {
-				if ( !frappe.desktop.wiggling ) {
-					frappe.desktop.open_module($(this).parent());
+			me.wrapper.on("click", ".app-icon, .app-icon-svg", function() {
+				if ( !me.wiggling ) {
+					me.open_module($(this).parent());
 				}
 			});
 		}
-		frappe.desktop.wrapper.on("click", ".circle", function() {
+		me.wrapper.on("click", ".circle", function() {
 			var doctype = $(this).attr('data-doctype');
 			if(doctype) {
 				frappe.ui.notifications.show_open_count_list(doctype);
 			}
 		});
 
-		frappe.desktop.setup_wiggle();
+		me.setup_wiggle();
 	},
 
-	setup_wiggle: () => {
+	setup_wiggle: function() {
+		var me = this;
 		// Wiggle, Wiggle, Wiggle.
-		const DURATION_LONG_PRESS = 1000;
+		const DURATION_LONG_PRESS = 1500;
 
 		var   timer_id      = 0;
-		const $cases        = frappe.desktop.wrapper.find('.case-wrapper');
-		const $icons        = frappe.desktop.wrapper.find('.app-icon');
-		const $notis        = $(frappe.desktop.wrapper.find('.circle').toArray().filter((object) => {
+		const $cases        = me.wrapper.find('.case-wrapper');
+		const $icons        = me.wrapper.find('.app-icon');
+		const $notis        = $(me.wrapper.find('.circle').toArray().filter((object) => {
 			// This hack is so bad, I should punch myself.
 			// Seriously, punch yourself.
 			const text      = $(object).find('.circle-text').html();
@@ -482,12 +336,15 @@ frappe.add_to_desktop = function(label, doctype, report) {
 
 			$icons.removeClass('wiggle');
 
-			frappe.desktop.wiggling   = false;
+			me.wiggling   = false;
+			me.sortableDisable();
 		};
 
-		frappe.desktop.wrapper.on('mousedown', '.app-icon', () => {
+		me.wrapper.on('mousedown', '.app-icon', () => {
 			timer_id     = setTimeout(() => {
-				frappe.desktop.wiggling = true;
+				me.sortableEnable();
+				
+				me.wiggling = true;
 				// hide all notifications.
 				$notis.hide();
 
@@ -544,13 +401,13 @@ frappe.add_to_desktop = function(label, doctype, report) {
 
 			}, DURATION_LONG_PRESS);
 		});
-		frappe.desktop.wrapper.on('mouseup mouseleave', '.app-icon', () => {
+		me.wrapper.on('mouseup mouseleave', '.app-icon', () => {
 			clearTimeout(timer_id);
 		});
 
 		// also stop wiggling if clicked elsewhere.
 		$('body').click((event) => {
-			if ( frappe.desktop.wiggling ) {
+			if ( me.wiggling ) {
 				const $target = $(event.target);
 				// our target shouldn't be .app-icons or .close
 				const $parent = $target.parents('.case-wrapper');
@@ -582,18 +439,22 @@ frappe.add_to_desktop = function(label, doctype, report) {
 	},
 
 	make_sortable: function() {
+		var me = this;
 		if (frappe.dom.is_touchscreen() || frappe.list_desktop) {
 			return;
 		}
-
-		new Sortable($("#icon-grid").get(0), {
+		
+		return new Sortable($("#desktop-icons").get(0), {
 			animation: 150,
 			onUpdate: function(event) {
 				var new_order = [];
-				$("#icon-grid .case-wrapper").each(function(i, e) {
+				
+				const $cases        = me.wrapper.find('.case-wrapper');
+
+				$cases.each(function(i, e) {
 					new_order.push($(this).attr("data-name"));
 				});
-
+				
 				frappe.call({
 					method: 'frappe.desk.doctype.desktop_icon.desktop_icon.set_order',
 					args: {
@@ -604,6 +465,19 @@ frappe.add_to_desktop = function(label, doctype, report) {
 				});
 			}
 		});
+	},
+	
+	sortableEnable: function() {
+		var me = this;
+		me.sort_inst.options["sort"] = true;
+		// me.sort_inst.options["disabled"] = false;
+		return false;
+	},
+	sortableDisable: function() {
+		var me = this;
+		me.sort_inst.options["sort"] = false;
+		// me.sort_inst.options["disabled"] = true;
+		return false;
 	},
 
 	set_background: function() {
@@ -666,4 +540,87 @@ frappe.add_to_desktop = function(label, doctype, report) {
 			}
 		}
 	}
-}); */
+});
+
+frappe.get_desktop_icons = function(show_hidden, show_global) {
+	// filter valid icons
+
+	// hidden == hidden from desktop
+	// blocked == no view from modules either
+
+	var out = [];
+
+	var add_to_out = function(module) {
+		module = frappe.get_module(module.module_name, module);
+		module.app_icon = frappe.ui.app_icon.get_html(module);
+		out.push(module);
+	};
+
+	var show_module = function(m) {
+		var out = true;
+		if(m.type==="page") {
+			out = m.link in frappe.boot.page_info;
+		} else if(m.force_show) {
+			out = true;
+		} else if(m._report) {
+			out = m._report in frappe.boot.user.all_reports;
+		} else if(m._doctype) {
+			//out = frappe.model.can_read(m._doctype);
+			out = frappe.boot.user.can_read.includes(m._doctype);
+		} else {
+			if(m.module_name==='Learn') {
+				// no permissions necessary for learn
+				out = true;
+			} else if(m.module_name==='Setup' && frappe.user.has_role('System Manager')) {
+				out = true;
+			} else {
+				out = frappe.boot.user.allow_modules.indexOf(m.module_name) !== -1;
+			}
+		}
+		if(m.hidden && !show_hidden) {
+			out = false;
+		}
+		if(m.blocked && !show_global) {
+			out = false;
+		}
+		return out;
+	};
+
+	let m;
+	for (var i=0, l=frappe.boot.desktop_icons.length; i < l; i++) {
+		m = frappe.boot.desktop_icons[i];
+		if ((['Setup', 'Core'].indexOf(m.module_name) === -1) && show_module(m)) {
+			add_to_out(m);
+		}
+	}
+
+	if(frappe.user_roles.includes('System Manager')) {
+		m = frappe.get_module('Setup');
+		if(show_module(m)) add_to_out(m);
+	}
+
+	if(frappe.user_roles.includes('Administrator')) {
+		m = frappe.get_module('Core');
+		if(show_module(m)) add_to_out(m);
+	}
+
+	return out;
+};
+
+frappe.add_to_desktop = function(label, doctype, report) {
+	frappe.call({
+		method: 'frappe.desk.doctype.desktop_icon.desktop_icon.add_user_icon',
+		args: {
+			'link': frappe.get_route_str(),
+			'label': label,
+			'type': 'link',
+			'_doctype': doctype,
+			'_report': report
+		},
+		callback: function(r) {
+			if(r.message) {
+				frappe.show_alert(__("Added"));
+			}
+		}
+	});
+};

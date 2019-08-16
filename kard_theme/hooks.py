@@ -24,7 +24,7 @@ app_include_js = "/assets/kard_theme/js/kard_theme.js"
 # web_include_js = "/assets/kard_theme/js/kard_theme.js"
 
 # include js in page
-# page_js = {"page" : "public/js/file.js"}
+# page_js = {"desktop" : "public/js/kard_theme.js"}
 
 # include js in doctype views
 # doctype_js = {"doctype" : "public/js/doctype.js"}

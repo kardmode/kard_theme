@@ -6,6 +6,7 @@
  "engine": "InnoDB",
  "field_order": [
   "enable_theme",
+  "enable_module_sidebar",
   "hide_default_desktop",
   "style",
   "location",
@@ -52,10 +53,16 @@
    "fieldname": "sync_standard_icons",
    "fieldtype": "Button",
    "label": "Sync Standard Icons"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_module_sidebar",
+   "fieldtype": "Check",
+   "label": "Enable Module Sidebar"
   }
  ],
  "issingle": 1,
- "modified": "2019-08-15 21:15:17.259264",
+ "modified": "2019-08-16 08:16:26.655132",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Kard Theme Settings",

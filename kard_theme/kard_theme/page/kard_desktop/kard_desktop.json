@@ -1,0 +1,24 @@
+{
+ "content": null,
+ "creation": "2019-08-16 02:38:59.037062",
+ "docstatus": 0,
+ "doctype": "Page",
+ "icon": "icon-th",
+ "idx": 0,
+ "modified": "2019-08-16 02:53:52.320746",
+ "modified_by": "Administrator",
+ "module": "Kard Theme",
+ "name": "kard-desktop",
+ "owner": "Administrator",
+ "page_name": "Kard Desktop",
+ "roles": [
+  {
+   "role": "All"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Desktop"
+}
