@@ -10,7 +10,8 @@
   "style",
   "location",
   "initialize_standard_icons",
-  "clear_user_icons"
+  "clear_user_icons",
+  "sync_standard_icons"
  ],
  "fields": [
   {
@@ -46,10 +47,15 @@
    "fieldname": "clear_user_icons",
    "fieldtype": "Button",
    "label": "Clear User Icons"
+  },
+  {
+   "fieldname": "sync_standard_icons",
+   "fieldtype": "Button",
+   "label": "Sync Standard Icons"
   }
  ],
  "issingle": 1,
- "modified": "2019-08-14 08:59:45.122217",
+ "modified": "2019-08-15 21:15:17.259264",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Kard Theme Settings",

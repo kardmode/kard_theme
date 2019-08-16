@@ -2,9 +2,19 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on('Kard Theme Settings', {
-	// refresh: function(frm) {
+	onload: function(frm) {
+		
+	},
+	refresh: function(frm) {
+		frm.add_custom_button(__("Show/Hide Standard Icons"), function() {
+			
+			frappe.route_options = {
+				standard: 1
+			}			
+			frappe.set_route("List", "Desktop Icon");
+		});
 
-	// }
+	},
 	
 	initialize_standard_icons: function(frm) {
 		frappe.confirm(__('This will reset and initialize standard icons from module definitions. Do you want to proceed?'),
