@@ -26,27 +26,21 @@ $.extend(frappe.desktop, {
 		var me = this;
 		
 		var container_wrapper = $(wrapper).find('.container')[0];
-
-		if (wrapper) {
-			this.page_wrapper = $(wrapper);
-		}
 		
-
-
 		if (container_wrapper) {
 			this.wrapper = $(container_wrapper);
+			this.container_wrapper = container_wrapper;
 		}
 		
-
 		
 		frappe.call({
-				method: "kard_theme.kard_theme.utils.get_theme_info",
-				callback: function(response) {
-					me.render(response);
-					me.sort_inst = me.make_sortable();
-					me.sortableDisable();
-				}
-			});
+			method: "kard_theme.kard_theme.utils.get_theme_info",
+			callback: function(response) {
+				me.render(response);
+				me.sort_inst = me.make_sortable();
+				me.sortableDisable();
+			}
+		});
 		
 	},
 
@@ -59,19 +53,17 @@ $.extend(frappe.desktop, {
 		if(!settings.enable_theme)
 			return;
 		
-		var new_container_div = document.createElement('div');
-		new_container_div.setAttribute("id", "layout-main-section");
-		me.wrapper.prepend(new_container_div);
+		var default_desktop = $(me.container_wrapper).find('.modules-page-container');
 
+		me.container_wrapper.innerHTML = "";		
+		new_container_div = document.createElement('div');
+		new_container_div.setAttribute("id", "layout-main-section");
+
+	
 		
-		let sidebar_wrapper = document.getElementById('desktop-sidebar');
 		
 		if(settings.enable_module_sidebar)
 		{
-			
-			if (sidebar_wrapper)
-				sidebar_wrapper.innerHTML = "";
-			
 			let sidebar_html = '<div id="desktop-sidebar" class="col-md-3 layout-side-section layout-left">'
 			+ '<ul class="module-sidebar-nav overlay-sidebar nav nav-pills nav-stacked">'
 			
@@ -119,28 +111,16 @@ $.extend(frappe.desktop, {
 		}
 		else
 		{
-			if (sidebar_wrapper)
-				sidebar_wrapper.parentNode.removeChild(sidebar_wrapper);
-
-			$(new_container_div).removeClass("col-md-9");
-
+			// $(new_container_div).removeClass("col-md-9");
 		}
 		
 		
 		
 		
-		let fields = response.message[0];
+	
 		
-		var desktop_icons_id = document.getElementById('desktop-icons');
-		if (!desktop_icons_id)
-		{
-			desktop_icons_id = document.createElement('div');
-			desktop_icons_id.setAttribute("id", "desktop-icons");
-		}
-		else
-		{
-			desktop_icons_id.innerHTML = "";
-		}
+		var desktop_icons_id = document.createElement('div');
+		desktop_icons_id.setAttribute("id", "desktop-icons");
 		
 		if(settings.style == "Grid")
 		{
@@ -151,7 +131,7 @@ $.extend(frappe.desktop, {
 			desktop_icons_id.setAttribute("class", "icon-horizontal");
 		}
 					
-						
+		let fields = response.message[0];				
 		fields.forEach(item => {
 			if (item.hidden === 1 || item.blocked ===1) { return; }
 			if(!item.route) {
@@ -194,24 +174,20 @@ $.extend(frappe.desktop, {
 
 		})
 		
-		let default_desktop = document.getElementsByClassName('modules-page-container');
+		
 		
 		if(default_desktop)
 		{
 			
 			if(settings.hide_default_desktop)
 			{
-				default_desktop[0].parentNode.removeChild(default_desktop[0]);
 			}
 			else
 			{
-				// insert wrapper before el in the DOM tree
-				// el.parentNode.insertBefore(wrapper, el);
-
-				// move el into wrapper
-				new_container_div.appendChild(default_desktop[0]);
+				new_container_div.prepend(default_desktop[0]);
 			}
 		}
+		
 		
 		
 		
@@ -224,8 +200,8 @@ $.extend(frappe.desktop, {
 			new_container_div.appendChild(desktop_icons_id);	
 		}
 		
+		me.container_wrapper.appendChild(new_container_div);
 
-		
 		me.setup_module_click();
 
 		// notifications
