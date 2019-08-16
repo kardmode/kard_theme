@@ -22,23 +22,16 @@ $(document).ready(function() {
  
 $.extend(frappe.desktop, {
 	load_shortcuts: function(wrapper) {
-		
-		var me = this;
-		
+				
 		var container_wrapper = $(wrapper).find('.container')[0];
-		
-		if (container_wrapper) {
-			this.wrapper = $(container_wrapper);
-			this.container_wrapper = container_wrapper;
-		}
-		
+		this.container_wrapper = container_wrapper;
 		
 		frappe.call({
 			method: "kard_theme.kard_theme.utils.get_theme_info",
 			callback: function(response) {
-				me.render(response);
-				me.sort_inst = me.make_sortable();
-				me.sortableDisable();
+				frappe.desktop.render(response);
+				frappe.desktop.sort_inst = frappe.desktop.make_sortable();
+				frappe.desktop.sortableDisable();
 			}
 		});
 		
@@ -53,13 +46,11 @@ $.extend(frappe.desktop, {
 		if(!settings.enable_theme)
 			return;
 		
-		var default_desktop = $(me.container_wrapper).find('.modules-page-container');
+		var default_desktop = $(frappe.desktop.container_wrapper).find('.modules-page-container');
 
-		me.container_wrapper.innerHTML = "";		
+		frappe.desktop.container_wrapper.innerHTML = "";		
 		new_container_div = document.createElement('div');
 		new_container_div.setAttribute("id", "layout-main-section");
-
-	
 		
 		
 		if(settings.enable_module_sidebar)
@@ -106,17 +97,9 @@ $.extend(frappe.desktop, {
 			});
 			
 			sidebar_html = sidebar_html + '</ul></div>';
-			me.wrapper.prepend(sidebar_html);
+			frappe.desktop.container_wrapper.innerHTML = sidebar_html;
 			$(new_container_div).addClass("col-md-9");
-		}
-		else
-		{
-			// $(new_container_div).removeClass("col-md-9");
-		}
-		
-		
-		
-		
+		}		
 	
 		
 		var desktop_icons_id = document.createElement('div');
@@ -164,10 +147,11 @@ $.extend(frappe.desktop, {
 			
 			let label_wrapper = '<div class="case-wrapper" title="'+item.label+'" data-name="'+item.module_name+'" data-link="'+item.route+'">'
 			+ '<div class="app-icon" style="background-color:'+ item.color +'"><i class="'+item.icon+'"></i></div>'
-			+ '<div class="case-label ellipsis">' 
+			+ '<div class="case-label ellipsis">'
 			+ '<div class="circle" data-doctype="" style="display: none;"><span class="circle-text"></span></div>'
 			+ '<span class="case-label-text">' + item.label + '</span>' 
 			+ '</div>'
+			+ '<div class="circle hide module-remove" style="background-color:#E0E0E0; color:#212121"><div class="circle-text"><b>&times</b></div></div>'
 			+ '</div>';
 							
 			desktop_icons_id.innerHTML = desktop_icons_id.innerHTML + label_wrapper;
@@ -200,14 +184,16 @@ $.extend(frappe.desktop, {
 			new_container_div.appendChild(desktop_icons_id);	
 		}
 		
-		me.container_wrapper.appendChild(new_container_div);
+		frappe.desktop.container_wrapper.appendChild(new_container_div);
+		
+		frappe.desktop.wrapper = $(desktop_icons_id);
 
-		me.setup_module_click();
+		frappe.desktop.setup_module_click();
 
 		// notifications
-		/* me.show_pending_notifications();
+		/* frappe.desktop.show_pending_notifications();
 		$(document).on("notification-update", function() {
-			me.show_pending_notifications();
+			frappe.desktop.show_pending_notifications();
 		});
 
 		$(document).trigger("desktop-render"); */
@@ -265,80 +251,80 @@ $.extend(frappe.desktop, {
 	},
 
 	setup_module_click: function() {
-		var me = this;
-		me.wiggling = false;
+		frappe.desktop.wiggling = false;
 
 		if(frappe.list_desktop) {
-			me.wrapper.on("click", ".desktop-list-item", function() {
-				me.open_module($(this));
+			frappe.desktop.wrapper.on("click", ".desktop-list-item", function() {
+				frappe.desktop.open_module($(this));
 			});
 		} else {
-			me.wrapper.on("click", ".app-icon, .app-icon-svg", function() {
-				if ( !me.wiggling ) {
-					me.open_module($(this).parent());
+			frappe.desktop.wrapper.on("click", ".app-icon, .app-icon-svg", function() {
+				if ( !frappe.desktop.wiggling ) {
+					frappe.desktop.open_module($(this).parent());
 				}
 			});
 		}
-		me.wrapper.on("click", ".circle", function() {
+		frappe.desktop.wrapper.on("click", ".circle", function() {
 			var doctype = $(this).attr('data-doctype');
 			if(doctype) {
 				frappe.ui.notifications.show_open_count_list(doctype);
 			}
 		});
 
-		me.setup_wiggle();
+		frappe.desktop.setup_wiggle();
 	},
 
-	setup_wiggle: function() {
-		var me = this;
+	setup_wiggle: () => {
 		// Wiggle, Wiggle, Wiggle.
-		const DURATION_LONG_PRESS = 1500;
+		const DURATION_LONG_PRESS = 1200;
 
 		var   timer_id      = 0;
-		const $cases        = me.wrapper.find('.case-wrapper');
-		const $icons        = me.wrapper.find('.app-icon');
-		const $notis        = $(me.wrapper.find('.circle').toArray().filter((object) => {
+		const $cases        = frappe.desktop.wrapper.find('.case-wrapper');
+		const $icons        = frappe.desktop.wrapper.find('.app-icon');
+		const $notis        = $(frappe.desktop.wrapper.find('.circle').toArray().filter((object) => {
 			// This hack is so bad, I should punch myself.
 			// Seriously, punch yourself.
 			const text      = $(object).find('.circle-text').html();
 
 			return text;
 		}));
-
+		
 		const clearWiggle   = () => {
-			const $closes   = $cases.find('.module-remove');
-			$closes.hide();
-			$notis.show();
+			const $cases        = frappe.desktop.wrapper.find('.case-wrapper');
+			const $icons        = frappe.desktop.wrapper.find('.app-icon');
+			const $notis        = $(frappe.desktop.wrapper.find('.circle').toArray().filter((object) => {
+				const text      = $(object).find('.circle-text').html();
+				return text;
+			}));
+			
+			const $closes    = frappe.desktop.wrapper.find('.module-remove');
+	
+			// $closes.hide();			
+			$closes.addClass('hide');
 
+			// $notis.show();
 			$icons.removeClass('wiggle');
-
-			me.wiggling   = false;
-			me.sortableDisable();
+			
+			frappe.desktop.wiggling   = false;
+			frappe.desktop.sortableDisable();
+			
 		};
 
-		me.wrapper.on('mousedown', '.app-icon', () => {
+		frappe.desktop.wrapper.on('mousedown', '.app-icon', () => {
 			timer_id     = setTimeout(() => {
-				me.sortableEnable();
+				frappe.desktop.sortableEnable();
 				
-				me.wiggling = true;
+				frappe.desktop.wiggling = true;
 				// hide all notifications.
-				$notis.hide();
+				// $notis.hide();
 
 				$cases.each((i) => {
 					const $case    = $($cases[i]);
-					const template =
-					`
-						<div class="circle module-remove" style="background-color:#E0E0E0; color:#212121">
-							<div class="circle-text">
-								<b>
-									&times
-								</b>
-							</div>
-						</div>
-					`;
+					
 
-					$case.append(template);
 					const $close  = $case.find('.module-remove');
+					// $close.show();
+					$close.removeClass('hide');
 					const name    = $case.attr('title');
 					$close.click(() => {
 						// good enough to create dynamic dialogs?
@@ -377,13 +363,13 @@ $.extend(frappe.desktop, {
 
 			}, DURATION_LONG_PRESS);
 		});
-		me.wrapper.on('mouseup mouseleave', '.app-icon', () => {
+		frappe.desktop.wrapper.on('mouseup mouseleave', '.app-icon', () => {
 			clearTimeout(timer_id);
 		});
 
 		// also stop wiggling if clicked elsewhere.
 		$('body').click((event) => {
-			if ( me.wiggling ) {
+			if ( frappe.desktop.wiggling ) {
 				const $target = $(event.target);
 				// our target shouldn't be .app-icons or .close
 				const $parent = $target.parents('.case-wrapper');
@@ -415,7 +401,6 @@ $.extend(frappe.desktop, {
 	},
 
 	make_sortable: function() {
-		var me = this;
 		if (frappe.dom.is_touchscreen() || frappe.list_desktop) {
 			return;
 		}
@@ -425,7 +410,7 @@ $.extend(frappe.desktop, {
 			onUpdate: function(event) {
 				var new_order = [];
 				
-				const $cases        = me.wrapper.find('.case-wrapper');
+				const $cases        = frappe.desktop.wrapper.find('.case-wrapper');
 
 				$cases.each(function(i, e) {
 					new_order.push($(this).attr("data-name"));
@@ -444,14 +429,12 @@ $.extend(frappe.desktop, {
 	},
 	
 	sortableEnable: function() {
-		var me = this;
-		me.sort_inst.options["sort"] = true;
+		frappe.desktop.sort_inst.options["sort"] = true;
 		// me.sort_inst.options["disabled"] = false;
 		return false;
 	},
 	sortableDisable: function() {
-		var me = this;
-		me.sort_inst.options["sort"] = false;
+		frappe.desktop.sort_inst.options["sort"] = false;
 		// me.sort_inst.options["disabled"] = true;
 		return false;
 	},
