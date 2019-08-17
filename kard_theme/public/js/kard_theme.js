@@ -1,26 +1,41 @@
 frappe.provide('frappe.desktop');
 
 $(window).on('hashchange', function() {
-	// load_desktop_shortcuts();
-	var wrapper = document.getElementById('page-desktop');
-	if(wrapper){
-		frappe.desktop.load_shortcuts(wrapper);		
-	}
+	let route_str = frappe.get_route_str();
+	if(!route_str)
+	{
+		var wrapper = document.getElementById('page-desktop');
+		if(wrapper){
+			frappe.desktop.load_shortcuts(wrapper);		
+		}
+	}	
+	
 });
  
 $(document).ready(function() {
-	
-	var wrapper = document.getElementById('page-desktop');
-	// var me = window;
-	if(wrapper){
-		frappe.desktop.load_shortcuts(wrapper);		
-	}
-		
+	let route_str = frappe.get_route_str();
+	if(!route_str)
+	{
+		var wrapper = document.getElementById('page-desktop');
+		if(wrapper){
+			frappe.desktop.load_shortcuts(wrapper);		
+		}
+	}	
 });
 
 
+
+$( document ).ajaxComplete(function() {
+	
+	var toolbar = document.getElementById('toolbar-user');		
+	if(toolbar)
+	{
+		frappe.add_to_desktop_link(toolbar);
+	}
+});
  
 $.extend(frappe.desktop, {
+	
 	load_shortcuts: function(wrapper) {
 				
 		var container_wrapper = $(wrapper).find('.container')[0];
@@ -176,8 +191,8 @@ $.extend(frappe.desktop, {
 		
 		
 		if(settings.location == "Top")
-		{
-			new_container_div.prepend(desktop_icons_id);	
+		{			
+			new_container_div.prepend(desktop_icons_id);			
 		}
 		else if(settings.location == "Bottom")
 		{
@@ -566,6 +581,8 @@ frappe.get_desktop_icons = function(show_hidden, show_global) {
 	return out;
 };
 
+
+
 frappe.add_to_desktop = function(label, doctype, report) {
 	frappe.call({
 		method: 'frappe.desk.doctype.desktop_icon.desktop_icon.add_user_icon',
@@ -583,3 +600,79 @@ frappe.add_to_desktop = function(label, doctype, report) {
 		}
 	});
 };
+
+frappe.add_to_desktop_link = function(toolbar) {
+	
+		let route_str = frappe.get_route_str();
+		let route = route_str.split('/');
+		var type = '';
+		var label = '';
+		
+		if (route[0] === 'List') {
+			type = route[0];
+			label = route[1];
+		}
+		// else if (route[2] === 'Report') {
+			// add_to_desktop_link(route[2],route[1]);
+		// }
+		// else if (route[0] === 'query-report') {
+			// add_to_desktop_link(route[0],route[1]);
+		// }
+		// else if (route[0] === 'modules') {
+			// type = route[0];
+			// label = route[1];
+		// }
+		// else if (route[0] === 'dashboard') {
+			// add_to_desktop_link(route[0],route[1]);
+		// }
+		else
+		{
+			let new_link = document.getElementById('add-to-desktop');
+			if(new_link)
+			{
+				new_link.outerHTML = '';
+			}
+			
+			return;
+		}		
+		
+		
+		if(toolbar)
+		{
+			let new_link = document.getElementById('add-to-desktop');
+			if(new_link)
+			{
+				new_link.innerHTML = '';
+			}
+			else
+			{
+				new_link = document.createElement('li');
+				new_link.setAttribute('id','add-to-desktop');
+			}
+			
+			
+			
+			
+			$('<a>'+__("Add To Desktop")+'</a>')
+			.appendTo(new_link)
+			.on("click", function() {
+				frappe.confirm(__("Add To Desktop"), 
+					function() {
+						
+						console.log(type);
+						console.log(label);
+						// frappe.add_to_desktop(label, type);
+					}
+				)
+			})
+			
+			toolbar.prepend(new_link);
+			// console.log(window.cur_page);
+			
+			/* this.page.add_menu_item(__('Add to Desktop'), function () {
+				frappe.add_to_desktop(me.frm.doctype, me.frm.doctype);
+			}, true); */
+		}
+		
+	};
+	

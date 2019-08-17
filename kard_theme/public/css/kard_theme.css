@@ -9,25 +9,32 @@
 	}
 }
 
-#desktop-icons-header {
+#btn-add-desktop-icons  {
+	padding-bottom: 20px;
+	text-align:right;
+}
+
+#layout-main-section {
     /* padding-top: 15px; */
     /* padding-bottom: 30px; */
     /* max-width: 970px; */
     margin-left: auto;
     margin-right: auto;
+	
 	margin-top:60px;
 	max-width:85vw;
-	text-align:right;
+	/* text-align:right; */
 }
+
 
 #desktop-icons {
     /* padding-top: 15px; */
     /* padding-bottom: 30px; */
     /* max-width: 970px; */
-    margin-left: auto;
+    /* margin-left: auto;
     margin-right: auto;
 	margin-top:60px;
-	max-width:85vw;
+	max-width:85vw; */
 }
 
 
