@@ -7,7 +7,9 @@
  "field_order": [
   "enable_theme",
   "enable_module_sidebar",
+  "enable_module_header",
   "hide_default_desktop",
+  "enable_bookmark_sorting",
   "style",
   "location",
   "initialize_standard_icons",
@@ -59,10 +61,22 @@
    "fieldname": "enable_module_sidebar",
    "fieldtype": "Check",
    "label": "Enable Module Sidebar"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_module_header",
+   "fieldtype": "Check",
+   "label": "Enable Module Desktop"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_bookmark_sorting",
+   "fieldtype": "Check",
+   "label": "Enable Bookmark Sorting"
   }
  ],
  "issingle": 1,
- "modified": "2019-08-16 08:16:26.655132",
+ "modified": "2019-08-24 06:18:31.127057",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Kard Theme Settings",

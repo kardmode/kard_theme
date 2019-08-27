@@ -25,13 +25,20 @@ $(document).ready(function() {
 
 
 
-$( document ).ajaxComplete(function() {
+$(document).ajaxComplete(function() {
+	var ajax_state = $('body').attr('data-ajax-state');
 	
-	var toolbar = document.getElementById('toolbar-user');		
-	if(toolbar)
+	if(ajax_state === "complete")
 	{
-		frappe.add_to_desktop_link(toolbar);
+		var toolbar = document.getElementById('toolbar-user');		
+		if(toolbar)
+		{
+			frappe.add_to_desktop_link(toolbar);
+		}
+		
 	}
+	
+	
 });
  
 $.extend(frappe.desktop, {
@@ -64,74 +71,141 @@ $.extend(frappe.desktop, {
 		var default_desktop = $(frappe.desktop.container_wrapper).find('.modules-page-container');
 
 		frappe.desktop.container_wrapper.innerHTML = "";		
+		
 		new_container_div = document.createElement('div');
 		new_container_div.setAttribute("id", "layout-main-section");
+		$(new_container_div).addClass("layout-main-section-wrapper");
 		
+		var modules = response.message[2];
+		frappe.desktop.desktop_icons = response.message[0];		
+
 		
 		if(settings.enable_module_sidebar)
 		{
-			let sidebar_html = '<div id="desktop-sidebar" class="col-md-3 layout-side-section layout-left">'
-			+ '<ul class="module-sidebar-nav overlay-sidebar nav nav-pills nav-stacked">'
-			
-			let modules = response.message[2];
-			modules.forEach(m => {
-				if (m.hidden === 1 || m.blocked ===1) { return; }
-				if(!m.route) {
-					if(m.link) {
-						m.route=strip(m.link, "#");
-					}
-					else if(m.type==="doctype") {
-						if(frappe.model.is_single(m._doctype)) {
-							m.route = 'Form/' + m._doctype;
-						} else {
-							m.route="List/" + m._doctype;
-						}
-					}
-					else if(m.type==="query-report") {
-						m.route="query-report/" + item.module_name;
-					}
-					else if(m.type==="report") {
-						m.route="List/" + m.doctype + "/Report/" + m.module_name;
-					}
-					else if(m.type==="page") {
-						m.route=m.module_name;
-					}
-					else if(m.type==="module") {
-						m.route="#modules/" + m.module_name;
-					}
-				}
-				let module_link = '<li class="strong module-sidebar-item">'
-				+ '<a class="module-link" data-name="'+ m.module_name + '" href="'+ m.route + '">'
-				+ '<i class="fa fa-chevron-right pull-right" style="display: none;"></i>'
-				+ '<span class="sidebar-icon" style="background-color: '+ m.color + '"><i class="'+ m.icon + '"></i></span>'
-				+ '<span class="ellipsis">'+ m.label + '</span>'
-				+ '</a>'
-				+ '</li>';
-				sidebar_html = sidebar_html + module_link;
-				
-			});
-			
-			sidebar_html = sidebar_html + '</ul></div>';
-			frappe.desktop.container_wrapper.innerHTML = sidebar_html;
+			frappe.desktop.container_wrapper.prepend(frappe.desktop.render_module_sidebar(frappe.desktop.desktop_icons));
 			$(new_container_div).addClass("col-md-9");
 		}		
-	
 		
-		var desktop_icons_id = document.createElement('div');
+		
+		
+		if(default_desktop)
+		{
+			
+			if(settings.hide_default_desktop)
+			{
+			}
+			else
+			{
+				if(default_desktop[0])
+					new_container_div.prepend(default_desktop[0]);
+			}
+		}
+		
+		var desktop_icons_id = frappe.desktop.render_user_desktop_icons(frappe.desktop.desktop_icons,settings.style);
+				
+		if(settings.location == "Top")
+		{			
+			new_container_div.prepend(desktop_icons_id);			
+		}
+		else if(settings.location == "Bottom")
+		{
+			new_container_div.appendChild(desktop_icons_id);	
+		}
+		
+		if(settings.enable_module_header)
+		{
+			let newNode = frappe.desktop.render_module_desktop_icons(frappe.desktop.desktop_icons);
+			desktop_icons_id.parentNode.insertBefore(newNode, desktop_icons_id.nextSibling);
+			frappe.desktop.setup_module_click(newNode);
+			
+			var overlay_sidebar = document.createElement('div');
+			overlay_sidebar.setAttribute("id", "overlay-sidebar");
+			overlay_sidebar.setAttribute("class", "hide layout-side-section layout-right overlay-rightbar");
+			
+			var close_sidebar_wrapper = document.createElement('div');
+			close_sidebar_wrapper.setAttribute("id", "close-sidebar");
+			close_sidebar_wrapper.setAttribute("class", "hide");
+			
+			// new_container_div.appendChild(overlay_sidebar);
+			desktop_icons_id.parentNode.insertBefore(overlay_sidebar, new_container_div.nextSibling);			
+			desktop_icons_id.parentNode.insertBefore(close_sidebar_wrapper, new_container_div.nextSibling);			
+			
+			
+
+			$(close_sidebar_wrapper).on('click', close_sidebar);
+			// overlay_sidebar.on("click", "a:not(.dropdown-toggle)", close_sidebar);
+
+			function close_sidebar(e) {
+				/* var scroll_container = document.getElementsByClassName("content page-container")[0]
+				scroll_container.setAttribute('style','overflow-y:hidden;overscroll-behavior:none;'); */
+				$(overlay_sidebar).removeClass('opened')
+						.find('.dropdown-toggle')
+						.removeClass('text-muted');
+				$(overlay_sidebar).find('.reports-dropdown')
+					.addClass('dropdown-menu');
+					
+				$(close_sidebar_wrapper).removeClass("opened");
+				
+			}
+			
+			
+		}
+		
+
+		
+		
+		
+		frappe.desktop.container_wrapper.appendChild(new_container_div);
+		
+		frappe.desktop.wrapper = $(desktop_icons_id);
+
+		frappe.desktop.setup_user_bookmark_click();
+		
+
+		// notifications
+		frappe.desktop.show_pending_notifications();
+		$(document).on("notification-update", function() {
+			frappe.desktop.show_pending_notifications();
+		});
+
+		//$(document).trigger("desktop-render");
+
+	},
+	
+	setup_sidebar: function(sidebar) {
+		$(sidebar).on("click", function() {
+			var layout_side_section = $('.layout-side-section');
+			var overlay_sidebar = layout_side_section.find('.overlay-sidebar');
+
+			overlay_sidebar.addClass('opened');
+			
+
+			
+		});
+	},
+	
+	render_user_desktop_icons: function(modules,style) {
+		let desktop_icons_id = document.createElement('div');
 		desktop_icons_id.setAttribute("id", "desktop-icons");
 		
-		if(settings.style == "Grid")
+		let title = document.createElement('div');
+		title.setAttribute("class", "h6 uppercase");
+		title.innerHTML = "Bookmarks";
+
+
+		
+		if(style == "Grid")
 		{
 			desktop_icons_id.setAttribute("class", "icon-grid");
 		}
-		else if(settings.style == "Horizontal")
+		else if(style == "Horizontal")
 		{
 			desktop_icons_id.setAttribute("class", "icon-horizontal");
 		}
 					
-		let fields = response.message[0];				
-		fields.forEach(item => {
-			if (item.hidden === 1 || item.blocked ===1) { return; }
+		var addedIcons =false;	
+		modules.forEach(item => {
+			if (item.hidden === 1 || item.blocked ===1 || item.type ==="module") { return; }
 			if(!item.route) {
 				if(item.link) {
 					item.route=strip(item.link, "#");
@@ -163,56 +237,152 @@ $.extend(frappe.desktop, {
 			let label_wrapper = '<div class="case-wrapper" title="'+item.label+'" data-name="'+item.module_name+'" data-link="'+item.route+'">'
 			+ '<div class="app-icon" style="background-color:'+ item.color +'"><i class="'+item.icon+'"></i></div>'
 			+ '<div class="case-label ellipsis">'
-			+ '<div class="circle" data-doctype="" style="display: none;"><span class="circle-text"></span></div>'
+			+ '<div class="circle module-notis hide" data-doctype="'+item.module_name+'"><span class="circle-text"></span></div>'
 			+ '<span class="case-label-text">' + item.label + '</span>' 
 			+ '</div>'
-			+ '<div class="circle hide module-remove" style="background-color:#E0E0E0; color:#212121"><div class="circle-text"><b>&times</b></div></div>'
+			+ '<div class="circle hide module-remove"><div class="circle-text"><b>&times</b></div></div>'
 			+ '</div>';
 							
 			desktop_icons_id.innerHTML = desktop_icons_id.innerHTML + label_wrapper;
-
+			addedIcons = true;
 		})
 		
+		desktop_icons_id.prepend(title);
 		
-		
-		if(default_desktop)
+		if(addedIcons === false)
 		{
+			let msg = document.createElement('div');
+			// msg.setAttribute("class", "h6 uppercase");
+			msg.innerHTML = "No Bookmarks Added";
+
+			desktop_icons_id.appendChild(msg);
 			
-			if(settings.hide_default_desktop)
-			{
-			}
-			else
-			{
-				new_container_div.prepend(default_desktop[0]);
-			}
 		}
+			
 		
+		return desktop_icons_id;
+	
+	},
+	
+	render_module_sidebar: function(modules) {
+		let desktop_icons_id = document.createElement('div');
+		desktop_icons_id.setAttribute("id", "desktop-sidebar");
+		$(desktop_icons_id).addClass("col-md-3 layout-side-section layout-left");
 		
-		
-		
-		if(settings.location == "Top")
-		{			
-			new_container_div.prepend(desktop_icons_id);			
-		}
-		else if(settings.location == "Bottom")
-		{
-			new_container_div.appendChild(desktop_icons_id);	
-		}
-		
-		frappe.desktop.container_wrapper.appendChild(new_container_div);
-		
-		frappe.desktop.wrapper = $(desktop_icons_id);
+		let ul_wrapper = document.createElement('ul');
+		$(ul_wrapper).addClass("module-sidebar-nav overlay-sidebar nav nav-pills nav-stacked");
 
-		frappe.desktop.setup_module_click();
-
-		// notifications
-		/* frappe.desktop.show_pending_notifications();
-		$(document).on("notification-update", function() {
-			frappe.desktop.show_pending_notifications();
+		
+		let sidebar_html = '<div id="desktop-sidebar" class="col-md-3 layout-side-section layout-left">'
+			+ '<ul class="module-sidebar-nav overlay-sidebar nav nav-pills nav-stacked">'
+			
+		modules.forEach(m => {
+			if (m.hidden === 1 || m.blocked ===1 || m.type !== 'module') { return; }
+			if(!m.route) {
+				if(m.link) {
+					m.route=strip(m.link, "#");
+				}
+				else if(m.type==="doctype") {
+					if(frappe.model.is_single(m._doctype)) {
+						m.route = 'Form/' + m._doctype;
+					} else {
+						m.route="List/" + m._doctype;
+					}
+				}
+				else if(m.type==="query-report") {
+					m.route="query-report/" + item.module_name;
+				}
+				else if(m.type==="report") {
+					m.route="List/" + m.doctype + "/Report/" + m.module_name;
+				}
+				else if(m.type==="page") {
+					m.route=m.module_name;
+				}
+				else if(m.type==="module") {
+					m.route="#modules/" + m.module_name;
+				}
+			}
+			let module_link = '<li class="strong module-sidebar-item">'
+			+ '<a class="module-link" data-name="'+ m.module_name + '" href="'+ m.route + '">'
+			+ '<i class="fa fa-chevron-right pull-right" style="display: none;"></i>'
+			+ '<span class="sidebar-icon" style="background-color: '+ m.color + '"><i class="'+ m.icon + '"></i></span>'
+			+ '<span class="ellipsis">'+ m.label + '</span>'
+			+ '</a>'
+			+ '</li>';
+			ul_wrapper.innerHTML = ul_wrapper.innerHTML + module_link;
+			
 		});
+		
+		desktop_icons_id.prepend(ul_wrapper);
+		return desktop_icons_id;
+	},
+	
+	render_module_desktop_icons: function(modules) {
+		
+		let desktop_icons_id = document.createElement('div');
+		desktop_icons_id.setAttribute("id", "desktop-modules");
+		$(desktop_icons_id).addClass("icon-grid");
+				
+		let title = document.createElement('div');
+		title.setAttribute("class", "h6 uppercase");
+		title.innerHTML = "Modules";
+		
+		var addedIcons = false;
+		modules.forEach(m => {
+			if (m.hidden === 1 || m.blocked ===1 || m.type !=="module") { return; }
+			if(!m.route) {
+				if(m.link) {
+					m.route=strip(m.link, "#");
+				}
+				else if(m.type==="doctype") {
+					if(frappe.model.is_single(m._doctype)) {
+						m.route = 'Form/' + m._doctype;
+					} else {
+						m.route="List/" + m._doctype;
+					}
+				}
+				else if(m.type==="query-report") {
+					m.route="query-report/" + item.module_name;
+				}
+				else if(m.type==="report") {
+					m.route="List/" + m.doctype + "/Report/" + m.module_name;
+				}
+				else if(m.type==="page") {
+					m.route=m.module_name;
+				}
+				else if(m.type==="module") {
+					m.route="#modules/" + m.module_name;
+				}
+			}
+			
+			let module_link = '<div class="case-wrapper" title="'+m.label+'" data-name="'+m.module_name+'" data-link="'+m.route+'">'
+			+ '<div class="app-icon" style="background-color:'+ m.color +'"><i class="'+m.icon+'"></i></div>'
+			+ '<div class="case-label ellipsis">'
+			+ '<div class="circle module-notis hide" data-doctype="'+m.module_name+'"><span class="circle-text"></span></div>'
+			+ '<span class="case-label-text">' + m.label + '</span>' 
+			+ '</div>'
+			+ '<div class="circle hide module-remove" style="background-color:#E0E0E0; color:#212121"><div class="circle-text"><b>&times</b></div></div>'
+			+ '</div>';
+			desktop_icons_id.innerHTML = desktop_icons_id.innerHTML + module_link;
+			addedIcons = true;
+		});
+		
+		desktop_icons_id.prepend(title);
+		
+		if(addedIcons === false)
+		{
+			let msg = document.createElement('div');
+			// msg.setAttribute("class", "h6 uppercase");
+			msg.innerHTML = "No Bookmarks Added";
 
-		$(document).trigger("desktop-render"); */
+			desktop_icons_id.appendChild(msg);
+			
+		}
+			
 
+		
+		return desktop_icons_id;
+	
 	},
 
 	render_help_messages: function(help_messages) {
@@ -265,21 +435,21 @@ $.extend(frappe.desktop, {
 
 	},
 
-	setup_module_click: function() {
+	setup_user_bookmark_click: function() {
 		frappe.desktop.wiggling = false;
 
 		if(frappe.list_desktop) {
 			frappe.desktop.wrapper.on("click", ".desktop-list-item", function() {
-				frappe.desktop.open_module($(this));
+				frappe.desktop.open_user_shortcut($(this));
 			});
 		} else {
 			frappe.desktop.wrapper.on("click", ".app-icon, .app-icon-svg", function() {
 				if ( !frappe.desktop.wiggling ) {
-					frappe.desktop.open_module($(this).parent());
+					frappe.desktop.open_user_shortcut($(this).parent());
 				}
 			});
 		}
-		frappe.desktop.wrapper.on("click", ".circle", function() {
+		frappe.desktop.wrapper.on("click", ".circle .modile-notis", function() {
 			var doctype = $(this).attr('data-doctype');
 			if(doctype) {
 				frappe.ui.notifications.show_open_count_list(doctype);
@@ -287,6 +457,35 @@ $.extend(frappe.desktop, {
 		});
 
 		frappe.desktop.setup_wiggle();
+	},
+	
+	setup_module_click: function(wrapper) {
+		frappe.desktop.wiggling = false;
+
+		if(frappe.list_desktop) {
+			$(wrapper).on("click", ".desktop-list-item", function() {
+				frappe.desktop.open_module($(this));
+			});
+		} else {
+			$(wrapper).on("click", ".app-icon, .app-icon-svg", function() {
+				if ( !frappe.desktop.wiggling ) {
+					
+					frappe.desktop.open_module($(this).parent());
+				}
+			});
+		}
+		
+		
+		
+		
+		/* wrapper.on("click", ".circle .modile-notis", function() {
+			var doctype = $(this).attr('data-doctype');
+			if(doctype) {
+				frappe.ui.notifications.show_open_count_list(doctype);
+			}
+		}); */
+
+		// frappe.desktop.setup_wiggle();
 	},
 
 	setup_wiggle: () => {
@@ -296,20 +495,17 @@ $.extend(frappe.desktop, {
 		var   timer_id      = 0;
 		const $cases        = frappe.desktop.wrapper.find('.case-wrapper');
 		const $icons        = frappe.desktop.wrapper.find('.app-icon');
-		const $notis        = $(frappe.desktop.wrapper.find('.circle').toArray().filter((object) => {
-			// This hack is so bad, I should punch myself.
-			// Seriously, punch yourself.
-			const text      = $(object).find('.circle-text').html();
-
-			return text;
-		}));
 		
 		const clearWiggle   = () => {
 			const $cases        = frappe.desktop.wrapper.find('.case-wrapper');
 			const $icons        = frappe.desktop.wrapper.find('.app-icon');
-			const $notis        = $(frappe.desktop.wrapper.find('.circle').toArray().filter((object) => {
+			let $notis        = $(wrapper.find('.module-notis').toArray().filter((object) => {
 				const text      = $(object).find('.circle-text').html();
-				return text;
+				
+				if(text)
+					return object;
+				else
+					return null;
 			}));
 			
 			const $closes    = frappe.desktop.wrapper.find('.module-remove');
@@ -318,21 +514,36 @@ $.extend(frappe.desktop, {
 			$closes.addClass('hide');
 
 			// $notis.show();
+			$notis.removeClass('hide');
 			$icons.removeClass('wiggle');
 			
 			frappe.desktop.wiggling   = false;
 			frappe.desktop.sortableDisable();
 			
 		};
-
-		frappe.desktop.wrapper.on('mousedown', '.app-icon', () => {
+			
+		
+		
+		frappe.desktop.wrapper.on('mousedown touchstart', '.app-icon', () => {
 			timer_id     = setTimeout(() => {
 				frappe.desktop.sortableEnable();
 				
 				frappe.desktop.wiggling = true;
 				// hide all notifications.
+				let $notis        = $(wrapper.find('.module-notis').toArray().filter((object) => {
+					const text      = $(object).find('.circle-text').html();
+					
+					if(text)
+						return object;
+					else
+						return null;
+				}));
+				
+				
+				
 				// $notis.hide();
-
+				$notis.addClass('hide');
+				
 				$cases.each((i) => {
 					const $case    = $($cases[i]);
 					
@@ -378,9 +589,11 @@ $.extend(frappe.desktop, {
 
 			}, DURATION_LONG_PRESS);
 		});
-		frappe.desktop.wrapper.on('mouseup mouseleave', '.app-icon', () => {
+		frappe.desktop.wrapper.on('mouseup mouseleave touchend', '.app-icon', () => {
 			clearTimeout(timer_id);
 		});
+		
+		
 
 		// also stop wiggling if clicked elsewhere.
 		$('body').click((event) => {
@@ -394,8 +607,7 @@ $.extend(frappe.desktop, {
 		});
 		// end wiggle
 	},
-
-	open_module: function(parent) {
+	open_user_shortcut: function(parent) {
 		var link = parent.attr("data-link");
 		if(link) {
 			if(link.indexOf('javascript:')===0) {
@@ -414,12 +626,109 @@ $.extend(frappe.desktop, {
 			}
 		}
 	},
-
-	make_sortable: function() {
-		if (frappe.dom.is_touchscreen() || frappe.list_desktop) {
-			return;
+	open_module: function(parent) {
+		
+	/* 	var scroll_container = document.getElementsByClassName("content page-container")[0]
+		scroll_container.setAttribute('style','overflow-y:hidden;overscroll-behavior:none;');
+ */
+		var link = parent.attr("data-link");
+		if(link) {
+			if(link.indexOf('javascript:')===0) {
+				eval(link.substr(11));
+			} else if(link.substr(0, 1)==="/" || link.substr(0, 4)==="http") {
+				window.open(link, "_blank");
+			} else {
+				frappe.set_route(link);
+			}
+			return false;
+		} else {
+			var module = frappe.get_module(parent.attr("data-name"));
+			if (module && module.onclick) {
+				module.onclick();
+				return false;
+			}
 		}
 		
+		
+		var module = frappe.get_module(parent.attr("data-name"));
+		var overlay_sidebar = document.getElementById("overlay-sidebar");
+		if(overlay_sidebar)
+		{
+			overlay_sidebar.innerHTML = "";
+			console.log(module);
+			let ul_element = document.createElement("ul");
+			let li_element = document.createElement("li");
+			li_element.setAttribute("class", "h2 uppercase");
+			li_element.innerHTML = module.label;	
+			
+			
+			ul_element.appendChild(li_element);
+			ul_element.setAttribute('class','nav nav-pills nav-stacked')
+			
+			frappe.call({
+				method: "kard_theme.kard_theme.utils.get_module_info",
+				args: {
+						'module': parent.attr("data-name"),
+					},
+				callback: function(response) {
+					console.log(response);
+					
+					var sections = response.message;
+					
+					sections.forEach(e => {
+						
+						let li_element = document.createElement("li");
+						li_element.setAttribute("class", "h4");
+						li_element.innerHTML = e.label;	
+						ul_element.appendChild(li_element);
+						
+						var obj = e.items;
+						
+						obj.forEach(e => {
+						
+							let li_element = document.createElement("li");
+							li_element.setAttribute("class", "h6");
+							
+							let link = 'modules/' + e.name;
+							li_element.innerHTML = '<a href="'+link+'">'+ e.name+'</a>';	
+						
+						
+							ul_element.appendChild(li_element);
+							
+							
+						})
+						
+						
+					})
+					
+					overlay_sidebar.appendChild(ul_element);
+			
+					$(overlay_sidebar).addClass("opened");
+					
+					
+				}
+			});
+			
+			
+			
+			
+		}
+		
+		var close_sidebar_wrapper = document.getElementById("close-sidebar");
+		if(close_sidebar_wrapper)
+		{
+			$(close_sidebar_wrapper).addClass("opened");
+		}
+		
+		
+		
+	},
+
+	make_sortable: function() {
+		/* if (frappe.dom.is_touchscreen() || frappe.list_desktop) {
+			return;
+		}
+		 */
 		return new Sortable($("#desktop-icons").get(0), {
 			animation: 150,
 			onUpdate: function(event) {
@@ -444,13 +753,21 @@ $.extend(frappe.desktop, {
 	},
 	
 	sortableEnable: function() {
+		if (/* frappe.dom.is_touchscreen() ||  */frappe.list_desktop || !frappe.desktop.sort_inst) {
+			return;
+		}
+		
+		
 		frappe.desktop.sort_inst.options["sort"] = true;
-		// me.sort_inst.options["disabled"] = false;
 		return false;
 	},
 	sortableDisable: function() {
+		if (/* frappe.dom.is_touchscreen() ||  */frappe.list_desktop || !frappe.desktop.sort_inst) {
+			return;
+		}
+		
+		
 		frappe.desktop.sort_inst.options["sort"] = false;
-		// me.sort_inst.options["disabled"] = true;
 		return false;
 	},
 
@@ -542,10 +859,7 @@ frappe.get_desktop_icons = function(show_hidden, show_global) {
 			//out = frappe.model.can_read(m._doctype);
 			out = frappe.boot.user.can_read.includes(m._doctype);
 		} else {
-			if(m.module_name==='Learn') {
-				// no permissions necessary for learn
-				out = true;
-			} else if(m.module_name==='Setup' && frappe.user.has_role('System Manager')) {
+			if(frappe.user.has_role('System Manager')) {
 				out = true;
 			} else {
 				out = frappe.boot.user.allow_modules.indexOf(m.module_name) !== -1;
@@ -561,14 +875,15 @@ frappe.get_desktop_icons = function(show_hidden, show_global) {
 	};
 
 	let m;
-	for (var i=0, l=frappe.boot.desktop_icons.length; i < l; i++) {
-		m = frappe.boot.desktop_icons[i];
-		if ((['Setup', 'Core'].indexOf(m.module_name) === -1) && show_module(m)) {
+		
+	for (var i=0, l=frappe.desktop.desktop_icons.length; i < l; i++) {
+		m = frappe.desktop.desktop_icons[i];
+		if ((['Core'].indexOf(m.module_name) === -1) && show_module(m)) {
 			add_to_out(m);
 		}
 	}
 
-	if(frappe.user_roles.includes('System Manager')) {
+	/* if(frappe.user_roles.includes('System Manager')) {
 		m = frappe.get_module('Setup');
 		if(show_module(m)) add_to_out(m);
 	}
@@ -576,7 +891,7 @@ frappe.get_desktop_icons = function(show_hidden, show_global) {
 	if(frappe.user_roles.includes('Administrator')) {
 		m = frappe.get_module('Core');
 		if(show_module(m)) add_to_out(m);
-	}
+	} */
 
 	return out;
 };
@@ -602,15 +917,31 @@ frappe.add_to_desktop = function(label, doctype, report) {
 };
 
 frappe.add_to_desktop_link = function(toolbar) {
-	
 		let route_str = frappe.get_route_str();
 		let route = route_str.split('/');
 		var type = '';
 		var label = '';
 		
+		
 		if (route[0] === 'List') {
 			type = route[0];
 			label = route[1];
+		}
+		else if (route[0] === 'Form') {
+			type = route[0];
+			label = route[1];
+			
+			if(!frappe.model.is_single(label)) {
+				let new_link = document.getElementById('add-to-desktop');
+				if(new_link)
+				{
+					new_link.outerHTML = '';
+				}
+				
+				return;
+			} 
+			
+			
 		}
 		// else if (route[2] === 'Report') {
 			// add_to_desktop_link(route[2],route[1]);
@@ -636,7 +967,8 @@ frappe.add_to_desktop_link = function(toolbar) {
 			return;
 		}		
 		
-		
+				
+
 		if(toolbar)
 		{
 			let new_link = document.getElementById('add-to-desktop');
@@ -651,27 +983,20 @@ frappe.add_to_desktop_link = function(toolbar) {
 			}
 			
 			
-			
+			var msg = 'Add '+label+' To Desktop?';
 			
 			$('<a>'+__("Add To Desktop")+'</a>')
 			.appendTo(new_link)
 			.on("click", function() {
-				frappe.confirm(__("Add To Desktop"), 
+				frappe.confirm(__(msg), 
 					function() {
-						
-						console.log(type);
-						console.log(label);
-						// frappe.add_to_desktop(label, type);
+						frappe.add_to_desktop(label,label);
 					}
 				)
 			})
 			
 			toolbar.prepend(new_link);
-			// console.log(window.cur_page);
 			
-			/* this.page.add_menu_item(__('Add to Desktop'), function () {
-				frappe.add_to_desktop(me.frm.doctype, me.frm.doctype);
-			}, true); */
 		}
 		
 	};

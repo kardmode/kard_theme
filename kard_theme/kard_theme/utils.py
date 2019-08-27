@@ -59,3 +59,13 @@ def get_standard_icons(user=None):
 
 	
 	return standard_icons
+	
+	
+@frappe.whitelist()
+def get_module_info(module):
+	from frappe.desk.moduleview import get_data
+	
+	data = get_data(module)
+	
+	return data
+
