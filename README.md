@@ -11,9 +11,9 @@ Has a settings page that customizes the theme.
 
 The list of allowed desktop icons is stored in a doctype called desktop_icon.
 
-All entries flagged as standard and not hidden will be shown on the desktop.
+All entries flagged as standard and not blocked will be shown on the desktop.
 
-All entries flagged as standard, not hidden and are of type 'module' will be shown on the sidebar.
+All entries flagged as standard, not blocked and are of type 'module' will be shown on the sidebar.
 
 <img src="Screenshot.png"/>
 
