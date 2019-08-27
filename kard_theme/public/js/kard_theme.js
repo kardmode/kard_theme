@@ -499,7 +499,7 @@ $.extend(frappe.desktop, {
 		const clearWiggle   = () => {
 			const $cases        = frappe.desktop.wrapper.find('.case-wrapper');
 			const $icons        = frappe.desktop.wrapper.find('.app-icon');
-			let $notis        = $(wrapper.find('.module-notis').toArray().filter((object) => {
+			let $notis        = $(frappe.desktop.wrapper.find('.module-notis').toArray().filter((object) => {
 				const text      = $(object).find('.circle-text').html();
 				
 				if(text)
@@ -530,7 +530,7 @@ $.extend(frappe.desktop, {
 				
 				frappe.desktop.wiggling = true;
 				// hide all notifications.
-				let $notis        = $(wrapper.find('.module-notis').toArray().filter((object) => {
+				let $notis        = $(frappe.desktop.wrapper.find('.module-notis').toArray().filter((object) => {
 					const text      = $(object).find('.circle-text').html();
 					
 					if(text)
@@ -725,10 +725,10 @@ $.extend(frappe.desktop, {
 	},
 
 	make_sortable: function() {
-		/* if (frappe.dom.is_touchscreen() || frappe.list_desktop) {
+		if (/* frappe.dom.is_touchscreen() ||  */frappe.list_desktop) {
 			return;
 		}
-		 */
+		
 		return new Sortable($("#desktop-icons").get(0), {
 			animation: 150,
 			onUpdate: function(event) {
