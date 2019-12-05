@@ -109,4 +109,35 @@ frappe.ui.form.on('Kard Theme Settings', {
 			}
 		);
 	},
+	copy_desktop_icons: function(frm) {
+		frappe.confirm(__('This will clear all kard desktop icons and copy from old desktop icons. Do you want to proceed?'),
+			function() {
+				frappe.call({
+					method: 'copy_from_desktop_icons',
+					args: {},
+					callback: function(r) {
+					
+					
+						if (r.message)
+						{	
+						
+						
+							
+							
+						}
+						
+					},
+					doc: frm.doc,
+					freeze: true,
+					freeze_message: 'Copying Desktop Icons...'
+				});
+			},
+			function() {
+				if(frappe.dom.freeze_count) {
+					frappe.dom.unfreeze();
+					frm.events.refresh(frm);
+				}
+			}
+		);
+	},
 });

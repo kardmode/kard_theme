@@ -4,10 +4,7 @@ $(window).on('hashchange', function() {
 	let route_str = frappe.get_route_str();
 	if(!route_str)
 	{
-		var wrapper = document.getElementById('page-desktop');
-		if(wrapper){
-			frappe.desktop.load_shortcuts(wrapper);		
-		}
+		frappe.desktop.load_shortcuts();	
 	}	
 	
 });
@@ -16,11 +13,8 @@ $(document).ready(function() {
 	let route_str = frappe.get_route_str();
 	if(!route_str)
 	{
-		var wrapper = document.getElementById('page-desktop');
-		if(wrapper){
-			frappe.desktop.load_shortcuts(wrapper);		
-		}
-	}	
+		frappe.desktop.load_shortcuts();		
+	}
 });
 
 
@@ -35,105 +29,90 @@ $(document).ajaxComplete(function() {
 		{
 			frappe.add_to_desktop_link(toolbar);
 		}
-		
 	}
-	
-	
+	let route_str = frappe.get_route_str();
+
 });
  
 $.extend(frappe.desktop, {
 	
 	load_shortcuts: function(wrapper) {
-				
-		var container_wrapper = $(wrapper).find('.container')[0];
-		this.container_wrapper = container_wrapper;
 		
-		frappe.call({
-			method: "kard_theme.kard_theme.utils.get_theme_info",
-			callback: function(response) {
-				frappe.desktop.render(response);
-				frappe.desktop.sort_inst = frappe.desktop.make_sortable();
-				frappe.desktop.sortableDisable();
-			}
-		});
+		var wrapper = document.getElementById('page-desktop');
+		if(wrapper){
+			this.container_wrapper = $(wrapper).find('.container')[0];
+		}
+		else
+		{
+			return;
+		}			
 		
+		// if(!frappe.boot.kard_settings.enable_theme)
+			// return;
+		
+		var check_wrapper = document.getElementById('layout-main-section');
+		if (!check_wrapper)
+		{
+			frappe.call({
+				method: "kard_theme.kard_theme.doctype.kard_theme_settings.kard_theme_settings.get_theme_info",
+				callback: function(response) {
+					
+					let settings = response.message[0];
+					if(!settings.enable_theme)
+						return;
+					
+					frappe.desktop.render(response.message[0],response.message[1],response.message[2]);
+										
+				}
+			});
+				// frappe.desktop.render(frappe.boot.kard_settings,frappe.boot.kard_user_icons,frappe.boot.kard_standard_icons);
+
+			
+		}
 	},
 
-	render: function(response) {
+	render: function(settings,user_icons,standard_icons) {
 		var me = this;
 		frappe.utils.set_title(__("Desktop"));
 
-		let settings = response.message[1];
-			
-		if(!settings.enable_theme)
-			return;
-		
-		var default_desktop = $(frappe.desktop.container_wrapper).find('.modules-page-container');
-
-		frappe.desktop.container_wrapper.innerHTML = "";		
-		
+				
 		new_container_div = document.createElement('div');
 		new_container_div.setAttribute("id", "layout-main-section");
 		$(new_container_div).addClass("layout-main-section-wrapper");
 		
-		var modules = response.message[2];
-		frappe.desktop.desktop_icons = response.message[0];		
-
+		frappe.desktop.desktop_icons = user_icons;		
+		frappe.desktop.modules = standard_icons;		
+		frappe.desktop.sort_inst = [];
 		
-		if(settings.enable_module_sidebar)
+	
+		
+		if(settings.enable_bookmarks)
 		{
-			frappe.desktop.container_wrapper.prepend(frappe.desktop.render_module_sidebar(frappe.desktop.desktop_icons));
-			$(new_container_div).addClass("col-md-9");
-		}		
-		
-		
-		
-		if(default_desktop)
-		{
-			
-			if(settings.hide_default_desktop)
-			{
-			}
-			else
-			{
-				if(default_desktop[0])
-					new_container_div.prepend(default_desktop[0]);
-			}
-		}
-		
-		var desktop_icons_id = frappe.desktop.render_user_desktop_icons(frappe.desktop.desktop_icons,settings.style);
-				
-		if(settings.location == "Top")
-		{			
-			new_container_div.prepend(desktop_icons_id);			
-		}
-		else if(settings.location == "Bottom")
-		{
+			let desktop_icons_id = frappe.desktop.render_user_desktop_icons(frappe.desktop.desktop_icons);
 			new_container_div.appendChild(desktop_icons_id);	
+			frappe.desktop.setup_user_bookmark_click( $(desktop_icons_id));
+			frappe.desktop.setup_wiggle($(desktop_icons_id));
+			// frappe.desktop.sort_inst.push(frappe.desktop.make_sortable($(desktop_icons_id).get(0)));			
 		}
 		
-		if(settings.enable_module_header)
+		if(settings.enable_module_header == 1)
 		{
-			let newNode = frappe.desktop.render_module_desktop_icons(frappe.desktop.desktop_icons);
-			desktop_icons_id.parentNode.insertBefore(newNode, desktop_icons_id.nextSibling);
-			frappe.desktop.setup_module_click(newNode);
-			
+			let newNode = frappe.desktop.render_module_desktop_icons(frappe.desktop.modules);
+			new_container_div.appendChild(newNode);
+			frappe.desktop.setup_module_click($(newNode));
+			// frappe.desktop.setup_wiggle($(newNode));
+			// frappe.desktop.sort_inst.push(frappe.desktop.make_sortable($(newNode).get(0)));			
+						
 			var overlay_sidebar = document.createElement('div');
 			overlay_sidebar.setAttribute("id", "overlay-sidebar");
 			overlay_sidebar.setAttribute("class", "hide layout-side-section layout-right overlay-rightbar");
 			
 			var close_sidebar_wrapper = document.createElement('div');
 			close_sidebar_wrapper.setAttribute("id", "close-sidebar");
-			close_sidebar_wrapper.setAttribute("class", "hide");
 			
-			// new_container_div.appendChild(overlay_sidebar);
-			desktop_icons_id.parentNode.insertBefore(overlay_sidebar, new_container_div.nextSibling);			
-			desktop_icons_id.parentNode.insertBefore(close_sidebar_wrapper, new_container_div.nextSibling);			
-			
-			
-
+			new_container_div.appendChild(overlay_sidebar);
+			frappe.desktop.container_wrapper.appendChild(close_sidebar_wrapper);
 			$(close_sidebar_wrapper).on('click', close_sidebar);
-			// overlay_sidebar.on("click", "a:not(.dropdown-toggle)", close_sidebar);
 
 			function close_sidebar(e) {
 				/* var scroll_container = document.getElementsByClassName("content page-container")[0]
@@ -151,25 +130,51 @@ $.extend(frappe.desktop, {
 			
 		}
 		
+		let div_clearfix = document.createElement('div');
+		$(div_clearfix).addClass("clearfix");
+		// new_container_div.appendChild(div_clearfix);
+		frappe.desktop.container_wrapper.prepend(div_clearfix);
 
+		frappe.desktop.container_wrapper.prepend(new_container_div);
+		if(settings.enable_module_sidebar)
+		{
+			let sidebar_icons_id = frappe.desktop.render_module_sidebar(frappe.desktop.modules);
+			frappe.desktop.container_wrapper.prepend(sidebar_icons_id);	
+			// frappe.desktop.setup_user_bookmark_click( $(sidebar_icons_id));
+			$(new_container_div).addClass("col-md-9");
+			$(new_container_div).removeClass("col-md-12");
+			$(".module-page-container").addClass("col-md-9");
+			$(".module-page-container").removeClass("col-md-12");
+		}	
+		else
+		{
+			$(new_container_div).removeClass("col-md-9");
+			$(new_container_div).addClass("col-md-12");
+			$(".module-page-container").removeClass("col-md-9");
+			$(".module-page-container").addClass("col-md-12");
+		}
 		
-		
-		
-		frappe.desktop.container_wrapper.appendChild(new_container_div);
-		
-		frappe.desktop.wrapper = $(desktop_icons_id);
 
-		frappe.desktop.setup_user_bookmark_click();
-		
+				
+		frappe.desktop.sortableDisable();
 
 		// notifications
-		frappe.desktop.show_pending_notifications();
-		$(document).on("notification-update", function() {
-			frappe.desktop.show_pending_notifications();
-		});
-
-		//$(document).trigger("desktop-render");
-
+		// frappe.desktop.show_pending_notifications();
+		// $(document).on("notification-update", function() {
+			// frappe.desktop.show_pending_notifications();
+		// });
+		
+		
+		if(settings.hide_default_desktop == 1)
+		{
+			$('#page-desktop').find('.modules-page-container').addClass("hide");
+		}
+		else
+		{
+			
+			$('#page-desktop').find('.modules-page-container').removeClass("hide");
+		}
+		
 	},
 	
 	setup_sidebar: function(sidebar) {
@@ -179,12 +184,11 @@ $.extend(frappe.desktop, {
 
 			overlay_sidebar.addClass('opened');
 			
-
 			
 		});
 	},
 	
-	render_user_desktop_icons: function(modules,style) {
+	render_user_desktop_icons: function(modules) {
 		let desktop_icons_id = document.createElement('div');
 		desktop_icons_id.setAttribute("id", "desktop-icons");
 		
@@ -192,53 +196,47 @@ $.extend(frappe.desktop, {
 		title.setAttribute("class", "h6 uppercase");
 		title.innerHTML = "Bookmarks";
 
-
+		modules.sort((a, b) => (a.idx > b.idx) ? 1 : -1)
 		
-		if(style == "Grid")
-		{
-			desktop_icons_id.setAttribute("class", "icon-grid");
-		}
-		else if(style == "Horizontal")
-		{
-			desktop_icons_id.setAttribute("class", "icon-horizontal");
-		}
-					
+		desktop_icons_id.setAttribute("class", "icon-grid");
+		
 		var addedIcons =false;	
-		modules.forEach(item => {
-			if (item.hidden === 1 || item.blocked ===1 || item.type ==="module") { return; }
-			if(!item.route) {
-				if(item.link) {
-					item.route=strip(item.link, "#");
+		modules.forEach(m => {
+			if (m.standard === 1|| m.hidden === 1 || m.blocked ===1 || m.type ==="module") { return; }
+			if(!m.route) {
+				if(m.link) {
+					m.route=strip(m.link, "#");
 				}
-				else if(item.type==="doctype") {
-					if(frappe.model.is_single(item._doctype)) {
-						item.route = 'Form/' + item._doctype;
+				else if(m.type==="doctype") {
+					if(frappe.model.is_single(m._doctype)) {
+						m.route = 'Form/' + m._doctype;
 					} else {
-						item.route="List/" + item._doctype;
+						m.route="List/" + m._doctype;
 					}
 				}
-				else if(item.type==="query-report") {
-					item.route="query-report/" + item.module_name;
+				else if(m.type==="query-report") {
+					m.route="query-report/" + m.module_name;
 				}
-				else if(item.type==="report") {
-					item.route="List/" + item.doctype + "/Report/" + item.module_name;
+				else if(m.type==="report") {
+					m.route="List/" + m.doctype + "/Report/" + m.module_name;
+					m.icon = "fa fa-list";
 				}
-				else if(item.type==="page") {
-					item.route=item.module_name;
+				else if(m.type==="page") {
+					m.route=m.module_name;
 				}
-				else if(item.type==="module") {
-					item.route="modules/" + item.module_name;
+				else if(m.type==="module") {
+					m.route="modules/" + m.module_name;
 				}
 			}
 			
 		
 			
 			
-			let label_wrapper = '<div class="case-wrapper" title="'+item.label+'" data-name="'+item.module_name+'" data-link="'+item.route+'">'
-			+ '<div class="app-icon" style="background-color:'+ item.color +'"><i class="'+item.icon+'"></i></div>'
+			let label_wrapper = '<div class="case-wrapper" title="'+m.label+'" data-name="'+m.module_name+'" data-link="'+m.route+'">'
+			+ '<div class="app-icon" style="background-color:'+ m.color +'"><i class="'+m.icon+'"></i></div>'
 			+ '<div class="case-label ellipsis">'
-			+ '<div class="circle module-notis hide" data-doctype="'+item.module_name+'"><span class="circle-text"></span></div>'
-			+ '<span class="case-label-text">' + item.label + '</span>' 
+			+ '<div class="circle module-notis hide" data-doctype="'+m.module_name+'"><span class="circle-text"></span></div>'
+			+ '<span class="case-label-text">' + m.label + '</span>' 
 			+ '</div>'
 			+ '<div class="circle hide module-remove"><div class="circle-text"><b>&times</b></div></div>'
 			+ '</div>';
@@ -253,8 +251,7 @@ $.extend(frappe.desktop, {
 		{
 			let msg = document.createElement('div');
 			// msg.setAttribute("class", "h6 uppercase");
-			msg.innerHTML = "No Bookmarks Added";
-
+			msg.innerHTML = "No Bookmarks Added"
 			desktop_icons_id.appendChild(msg);
 			
 		}
@@ -277,7 +274,7 @@ $.extend(frappe.desktop, {
 			+ '<ul class="module-sidebar-nav overlay-sidebar nav nav-pills nav-stacked">'
 			
 		modules.forEach(m => {
-			if (m.hidden === 1 || m.blocked ===1 || m.type !== 'module') { return; }
+			if (m.standard === 0 ||m.blocked === 1 || m.type !=="module") {  return; }
 			if(!m.route) {
 				if(m.link) {
 					m.route=strip(m.link, "#");
@@ -309,6 +306,7 @@ $.extend(frappe.desktop, {
 			+ '<span class="ellipsis">'+ m.label + '</span>'
 			+ '</a>'
 			+ '</li>';
+
 			ul_wrapper.innerHTML = ul_wrapper.innerHTML + module_link;
 			
 		});
@@ -327,9 +325,12 @@ $.extend(frappe.desktop, {
 		title.setAttribute("class", "h6 uppercase");
 		title.innerHTML = "Modules";
 		
+		
+		modules.sort((a, b) => (a.module_name > b.module_name) ? 1 : -1)
 		var addedIcons = false;
 		modules.forEach(m => {
-			if (m.hidden === 1 || m.blocked ===1 || m.type !=="module") { return; }
+			if (m.standard === 0 ||m.blocked === 1 || m.type !=="module") { 
+			return; }
 			if(!m.route) {
 				if(m.link) {
 					m.route=strip(m.link, "#");
@@ -363,6 +364,7 @@ $.extend(frappe.desktop, {
 			+ '</div>'
 			+ '<div class="circle hide module-remove" style="background-color:#E0E0E0; color:#212121"><div class="circle-text"><b>&times</b></div></div>'
 			+ '</div>';
+			
 			desktop_icons_id.innerHTML = desktop_icons_id.innerHTML + module_link;
 			addedIcons = true;
 		});
@@ -435,71 +437,55 @@ $.extend(frappe.desktop, {
 
 	},
 
-	setup_user_bookmark_click: function() {
+	setup_user_bookmark_click: function(wrapper) {
 		frappe.desktop.wiggling = false;
 
-		if(frappe.list_desktop) {
-			frappe.desktop.wrapper.on("click", ".desktop-list-item", function() {
-				frappe.desktop.open_user_shortcut($(this));
-			});
-		} else {
-			frappe.desktop.wrapper.on("click", ".app-icon, .app-icon-svg", function() {
-				if ( !frappe.desktop.wiggling ) {
-					frappe.desktop.open_user_shortcut($(this).parent());
-				}
-			});
-		}
-		frappe.desktop.wrapper.on("click", ".circle .modile-notis", function() {
+		wrapper.on("click", ".app-icon, .app-icon-svg", function() {
+			if ( !frappe.desktop.wiggling ) {
+				frappe.desktop.open_user_shortcut($(this).parent());
+			}
+		});
+			
+		wrapper.on("click", ".circle .modile-notis", function() {
 			var doctype = $(this).attr('data-doctype');
 			if(doctype) {
 				frappe.ui.notifications.show_open_count_list(doctype);
 			}
 		});
 
-		frappe.desktop.setup_wiggle();
 	},
 	
 	setup_module_click: function(wrapper) {
 		frappe.desktop.wiggling = false;
 
-		if(frappe.list_desktop) {
-			$(wrapper).on("click", ".desktop-list-item", function() {
-				frappe.desktop.open_module($(this));
-			});
-		} else {
-			$(wrapper).on("click", ".app-icon, .app-icon-svg", function() {
-				if ( !frappe.desktop.wiggling ) {
-					
-					frappe.desktop.open_module($(this).parent());
-				}
-			});
-		}
+		wrapper.on("click", ".app-icon, .app-icon-svg", function() {
+			if ( !frappe.desktop.wiggling ) {
+				
+				frappe.desktop.open_module($(this).parent());
+			}
+		});
 		
-		
-		
-		
-		/* wrapper.on("click", ".circle .modile-notis", function() {
+		wrapper.on("click", ".circle .modile-notis", function() {
 			var doctype = $(this).attr('data-doctype');
 			if(doctype) {
 				frappe.ui.notifications.show_open_count_list(doctype);
 			}
-		}); */
+		});
 
-		// frappe.desktop.setup_wiggle();
 	},
-
-	setup_wiggle: () => {
+	
+	setup_wiggle: function(wrapper) {
 		// Wiggle, Wiggle, Wiggle.
 		const DURATION_LONG_PRESS = 1200;
 
 		var   timer_id      = 0;
-		const $cases        = frappe.desktop.wrapper.find('.case-wrapper');
-		const $icons        = frappe.desktop.wrapper.find('.app-icon');
+		const $cases        = wrapper.find('.case-wrapper');
+		const $icons        = wrapper.find('.app-icon');
 		
 		const clearWiggle   = () => {
-			const $cases        = frappe.desktop.wrapper.find('.case-wrapper');
-			const $icons        = frappe.desktop.wrapper.find('.app-icon');
-			let $notis        = $(frappe.desktop.wrapper.find('.module-notis').toArray().filter((object) => {
+			const $cases        = wrapper.find('.case-wrapper');
+			const $icons        = wrapper.find('.app-icon');
+			let $notis        = $(wrapper.find('.module-notis').toArray().filter((object) => {
 				const text      = $(object).find('.circle-text').html();
 				
 				if(text)
@@ -508,30 +494,26 @@ $.extend(frappe.desktop, {
 					return null;
 			}));
 			
-			const $closes    = frappe.desktop.wrapper.find('.module-remove');
+			const $closes    = wrapper.find('.module-remove');
 	
-			// $closes.hide();			
 			$closes.addClass('hide');
-
-			// $notis.show();
 			$notis.removeClass('hide');
 			$icons.removeClass('wiggle');
-			
 			frappe.desktop.wiggling   = false;
 			frappe.desktop.sortableDisable();
-			
 		};
 			
 		
 		
-		frappe.desktop.wrapper.on('mousedown touchstart', '.app-icon', () => {
+		wrapper.on('mousedown touchstart', '.app-icon', () => {
 			timer_id     = setTimeout(() => {
 				frappe.desktop.sortableEnable();
-				
 				frappe.desktop.wiggling = true;
+				
+				
 				// hide all notifications.
-				let $notis        = $(frappe.desktop.wrapper.find('.module-notis').toArray().filter((object) => {
-					const text      = $(object).find('.circle-text').html();
+				let $notis        = $(wrapper.find('.module-notis').toArray().filter((object) => {
+					let text      = $(object).find('.circle-text').html();
 					
 					if(text)
 						return object;
@@ -539,9 +521,6 @@ $.extend(frappe.desktop, {
 						return null;
 				}));
 				
-				
-				
-				// $notis.hide();
 				$notis.addClass('hide');
 				
 				$cases.each((i) => {
@@ -549,8 +528,8 @@ $.extend(frappe.desktop, {
 					
 
 					const $close  = $case.find('.module-remove');
-					// $close.show();
 					$close.removeClass('hide');
+					$close.unbind();
 					const name    = $case.attr('title');
 					$close.click(() => {
 						// good enough to create dynamic dialogs?
@@ -559,7 +538,7 @@ $.extend(frappe.desktop, {
 						});
 						dialog.set_primary_action(__('Hide'), () => {
 							frappe.call({
-								method: 'frappe.desk.doctype.desktop_icon.desktop_icon.hide',
+								method: 'kard_theme.kard_theme.doctype.kard_desktop_icon.kard_desktop_icon.hide',
 								args: { name: name },
 								freeze: true,
 								callback: (response) =>
@@ -576,6 +555,7 @@ $.extend(frappe.desktop, {
 						});
 						// Hacks, Hacks and Hacks.
 						var $cancel = dialog.get_close_btn();
+						$cancel.unbind();
 						$cancel.click(() => {
 							clearWiggle();
 						});
@@ -589,13 +569,14 @@ $.extend(frappe.desktop, {
 
 			}, DURATION_LONG_PRESS);
 		});
-		frappe.desktop.wrapper.on('mouseup mouseleave touchend', '.app-icon', () => {
+		wrapper.on('mouseup mouseleave touchend', '.app-icon', () => {
 			clearTimeout(timer_id);
 		});
 		
 		
 
 		// also stop wiggling if clicked elsewhere.
+		$('body').unbind();
 		$('body').click((event) => {
 			if ( frappe.desktop.wiggling ) {
 				const $target = $(event.target);
@@ -655,7 +636,6 @@ $.extend(frappe.desktop, {
 		if(overlay_sidebar)
 		{
 			overlay_sidebar.innerHTML = "";
-			console.log(module);
 			let ul_element = document.createElement("ul");
 			let li_element = document.createElement("li");
 			li_element.setAttribute("class", "h2 uppercase");
@@ -666,12 +646,11 @@ $.extend(frappe.desktop, {
 			ul_element.setAttribute('class','nav nav-pills nav-stacked')
 			
 			frappe.call({
-				method: "kard_theme.kard_theme.utils.get_module_info",
+				method: "kard_theme.kard_theme.doctype.kard_theme_settings.kard_theme_settings.get_module_info",
 				args: {
 						'module': parent.attr("data-name"),
 					},
 				callback: function(response) {
-					console.log(response);
 					
 					var sections = response.message;
 					
@@ -724,24 +703,20 @@ $.extend(frappe.desktop, {
 		
 	},
 
-	make_sortable: function() {
-		if (/* frappe.dom.is_touchscreen() ||  */frappe.list_desktop) {
-			return;
-		}
-		
-		return new Sortable($("#desktop-icons").get(0), {
+	make_sortable: function(wrapper) {
+		return new Sortable(wrapper, {
 			animation: 150,
 			onUpdate: function(event) {
 				var new_order = [];
 				
-				const $cases        = frappe.desktop.wrapper.find('.case-wrapper');
+				const $cases = $(wrapper).find('.case-wrapper');
 
 				$cases.each(function(i, e) {
 					new_order.push($(this).attr("data-name"));
 				});
 				
 				frappe.call({
-					method: 'frappe.desk.doctype.desktop_icon.desktop_icon.set_order',
+					method: 'kard_theme.kard_theme.doctype.kard_desktop_icon.kard_desktop_icon.set_order',
 					args: {
 						'new_order': new_order,
 						'user': frappe.session.user
@@ -757,8 +732,10 @@ $.extend(frappe.desktop, {
 			return;
 		}
 		
-		
-		frappe.desktop.sort_inst.options["sort"] = true;
+		for (var i=0, l=frappe.desktop.sort_inst.length; i < l; i++) {
+			frappe.desktop.sort_inst[i].options["sort"] = true;
+		}
+	
 		return false;
 	},
 	sortableDisable: function() {
@@ -767,7 +744,10 @@ $.extend(frappe.desktop, {
 		}
 		
 		
-		frappe.desktop.sort_inst.options["sort"] = false;
+		for (var i=0, l=frappe.desktop.sort_inst.length; i < l; i++) {
+			frappe.desktop.sort_inst[i].options["sort"] = false;
+		}
+	
 		return false;
 	},
 
@@ -900,7 +880,7 @@ frappe.get_desktop_icons = function(show_hidden, show_global) {
 
 frappe.add_to_desktop = function(label, doctype, report) {
 	frappe.call({
-		method: 'frappe.desk.doctype.desktop_icon.desktop_icon.add_user_icon',
+		method: 'kard_theme.kard_theme.doctype.kard_desktop_icon.kard_desktop_icon.add_user_icon',
 		args: {
 			'link': frappe.get_route_str(),
 			'label': label,
@@ -917,38 +897,63 @@ frappe.add_to_desktop = function(label, doctype, report) {
 };
 
 frappe.add_to_desktop_link = function(toolbar) {
-		let route_str = frappe.get_route_str();
-		let route = route_str.split('/');
-		var type = '';
-		var label = '';
+	let route_str = frappe.get_route_str();
+	let route = route_str.split('/');
+	var type = '';
+	var label = '';
+	var report = '';
+
+	if(toolbar)
+	{
+		let new_link = document.getElementById('add-to-desktop');
+		if(new_link)
+		{
+			$(new_link).addClass("hide");
+		}
+		else
+		{
+			new_link = document.createElement('li');
+			new_link.setAttribute('id','add-to-desktop');
+			$(new_link).addClass("hide");
+			
+			
+		
+			$('<a>'+__("Add To Desktop")+'</a>').appendTo(new_link);
+			
+			toolbar.prepend(new_link);
+		}
+		
+		
 		
 		
 		if (route[0] === 'List') {
 			type = route[0];
 			label = route[1];
+			
+			$(new_link).removeClass("hide");
 		}
 		else if (route[0] === 'Form') {
 			type = route[0];
 			label = route[1];
 			
-			if(!frappe.model.is_single(label)) {
-				let new_link = document.getElementById('add-to-desktop');
-				if(new_link)
-				{
-					new_link.outerHTML = '';
-				}
-				
-				return;
+			if(frappe.model.is_single(label)) {
+				$(new_link).removeClass("hide");
 			} 
 			
 			
 		}
-		// else if (route[2] === 'Report') {
-			// add_to_desktop_link(route[2],route[1]);
-		// }
-		// else if (route[0] === 'query-report') {
-			// add_to_desktop_link(route[0],route[1]);
-		// }
+		else if (route[2] === 'Report') {
+			type = route[2];
+			// label = route[1];
+			report = route[1];
+			$(new_link).removeClass("hide");
+		}
+		else if (route[0] === 'query-report') {
+			type = route[0];
+			// label = route[1];
+			report = route[1];
+			$(new_link).removeClass("hide");
+		}
 		// else if (route[0] === 'modules') {
 			// type = route[0];
 			// label = route[1];
@@ -958,46 +963,24 @@ frappe.add_to_desktop_link = function(toolbar) {
 		// }
 		else
 		{
-			let new_link = document.getElementById('add-to-desktop');
-			if(new_link)
-			{
-				new_link.outerHTML = '';
-			}
-			
-			return;
-		}		
-		
-				
-
-		if(toolbar)
-		{
-			let new_link = document.getElementById('add-to-desktop');
-			if(new_link)
-			{
-				new_link.innerHTML = '';
-			}
-			else
-			{
-				new_link = document.createElement('li');
-				new_link.setAttribute('id','add-to-desktop');
-			}
-			
-			
-			var msg = 'Add '+label+' To Desktop?';
-			
-			$('<a>'+__("Add To Desktop")+'</a>')
-			.appendTo(new_link)
-			.on("click", function() {
-				frappe.confirm(__(msg), 
-					function() {
-						frappe.add_to_desktop(label,label);
-					}
-				)
-			})
-			
-			toolbar.prepend(new_link);
-			
+	
 		}
 		
-	};
+		
+		var msg = 'Add '+label+' To Desktop?';
+		$(new_link).unbind();
+		$(new_link).on("click", function() {
+			
+		console.log(label);
+			
+			frappe.confirm(__(msg), 
+				function() {
+					frappe.add_to_desktop(label,label,report);
+				}
+			)
+		});
+		
+	}
+		
+};
 	

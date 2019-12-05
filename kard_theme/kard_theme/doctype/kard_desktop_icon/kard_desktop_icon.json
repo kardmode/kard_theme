@@ -1,6 +1,7 @@
 {
- "creation": "2019-08-27 00:07:44.629751",
+ "creation": "2019-11-20 20:05:06.240556",
  "doctype": "DocType",
+ "document_type": "Setup",
  "engine": "InnoDB",
  "field_order": [
   "module_name",
@@ -13,6 +14,7 @@
   "category",
   "hidden",
   "blocked",
+  "hide_module_in_desktop",
   "force_show",
   "section_break_7",
   "type",
@@ -58,8 +60,7 @@
   {
    "fieldname": "app",
    "fieldtype": "Data",
-   "label": "App",
-   "read_only": 1
+   "label": "App"
   },
   {
    "fieldname": "description",
@@ -68,8 +69,9 @@
   },
   {
    "fieldname": "category",
-   "fieldtype": "Data",
-   "label": "Category"
+   "fieldtype": "Select",
+   "label": "Category",
+   "options": "Modules\nAdministration\nPlaces"
   },
   {
    "default": "0",
@@ -143,12 +145,18 @@
    "fieldname": "idx",
    "fieldtype": "Int",
    "label": "Idx"
+  },
+  {
+   "default": "0",
+   "fieldname": "hide_module_in_desktop",
+   "fieldtype": "Check",
+   "label": "Hide Module In Desktop"
   }
  ],
- "modified": "2019-08-27 00:07:44.629751",
+ "modified": "2019-11-25 14:11:14.323372",
  "modified_by": "Administrator",
  "module": "Kard Theme",
- "name": "Kard Deskop Icon",
+ "name": "Kard Desktop Icon",
  "owner": "Administrator",
  "permissions": [
   {

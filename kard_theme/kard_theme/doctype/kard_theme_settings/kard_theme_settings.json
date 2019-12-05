@@ -2,19 +2,20 @@
  "beta": 1,
  "creation": "2019-08-14 07:29:29.143437",
  "doctype": "DocType",
+ "document_type": "Setup",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
   "enable_theme",
+  "enable_bookmarks",
   "enable_module_sidebar",
   "enable_module_header",
   "hide_default_desktop",
   "enable_bookmark_sorting",
-  "style",
-  "location",
   "initialize_standard_icons",
   "clear_user_icons",
-  "sync_standard_icons"
+  "sync_standard_icons",
+  "copy_desktop_icons"
  ],
  "fields": [
   {
@@ -28,18 +29,6 @@
    "fieldname": "hide_default_desktop",
    "fieldtype": "Check",
    "label": "Hide Default Desktop"
-  },
-  {
-   "fieldname": "style",
-   "fieldtype": "Select",
-   "label": "Style",
-   "options": "Grid\nHorizontal"
-  },
-  {
-   "fieldname": "location",
-   "fieldtype": "Select",
-   "label": "Location",
-   "options": "Top\nBottom"
   },
   {
    "fieldname": "initialize_standard_icons",
@@ -73,10 +62,21 @@
    "fieldname": "enable_bookmark_sorting",
    "fieldtype": "Check",
    "label": "Enable Bookmark Sorting"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_bookmarks",
+   "fieldtype": "Check",
+   "label": "Enable Bookmarks"
+  },
+  {
+   "fieldname": "copy_desktop_icons",
+   "fieldtype": "Button",
+   "label": "copy_desktop_icons"
   }
  ],
  "issingle": 1,
- "modified": "2019-08-24 06:18:31.127057",
+ "modified": "2019-11-25 14:11:22.702361",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Kard Theme Settings",
