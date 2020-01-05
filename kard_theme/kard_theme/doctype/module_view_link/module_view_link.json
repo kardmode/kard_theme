@@ -1,0 +1,165 @@
+{
+ "beta": 1,
+ "creation": "2017-11-08 02:33:14.770339",
+ "doctype": "DocType",
+ "document_type": "Customize",
+ "engine": "InnoDB",
+ "field_order": [
+  "module_name",
+  "section",
+  "label",
+  "column_break_3",
+  "hidden",
+  "blocked",
+  "force_show",
+  "use_section_set_in_doctype",
+  "section_break_7",
+  "type",
+  "_doctype",
+  "_module",
+  "_report",
+  "_page",
+  "link",
+  "column_break_10",
+  "color",
+  "icon"
+ ],
+ "fields": [
+  {
+   "fieldname": "module_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Module Page",
+   "options": "Module Def",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section",
+   "fieldtype": "Link",
+   "label": "Section",
+   "options": "MRP Module Section",
+   "reqd": 1
+  },
+  {
+   "fieldname": "label",
+   "fieldtype": "Data",
+   "label": "Label",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "hidden",
+   "fieldtype": "Check",
+   "label": "Hidden"
+  },
+  {
+   "default": "0",
+   "fieldname": "blocked",
+   "fieldtype": "Check",
+   "label": "Blocked"
+  },
+  {
+   "default": "0",
+   "fieldname": "force_show",
+   "fieldtype": "Check",
+   "label": "Force Show",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "use_section_set_in_doctype",
+   "fieldtype": "Check",
+   "label": "Use Section Set In Doctype"
+  },
+  {
+   "fieldname": "section_break_7",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Type",
+   "options": "doctype\nlink\npage\nreport\nmodule"
+  },
+  {
+   "fieldname": "_doctype",
+   "fieldtype": "Link",
+   "label": "_doctype",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "_module",
+   "fieldtype": "Link",
+   "label": "_module",
+   "options": "Module Def"
+  },
+  {
+   "fieldname": "_report",
+   "fieldtype": "Link",
+   "label": "_report",
+   "options": "Report"
+  },
+  {
+   "fieldname": "_page",
+   "fieldtype": "Link",
+   "label": "_page",
+   "options": "Page"
+  },
+  {
+   "fieldname": "link",
+   "fieldtype": "Small Text",
+   "label": "Link"
+  },
+  {
+   "fieldname": "column_break_10",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "color",
+   "fieldtype": "Data",
+   "label": "Color"
+  },
+  {
+   "fieldname": "icon",
+   "fieldtype": "Data",
+   "label": "Icon"
+  }
+ ],
+ "modified": "2020-01-05 21:34:39.416122",
+ "modified_by": "Administrator",
+ "module": "Kard Theme",
+ "name": "Module View Link",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "All",
+   "share": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "title_field": "label"
+}
