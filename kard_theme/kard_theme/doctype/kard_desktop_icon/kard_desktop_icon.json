@@ -69,9 +69,9 @@
   },
   {
    "fieldname": "category",
-   "fieldtype": "Select",
+   "fieldtype": "Link",
    "label": "Category",
-   "options": "Modules\nAdministration\nPlaces"
+   "options": "Kard Desktop Category"
   },
   {
    "default": "0",
@@ -153,7 +153,7 @@
    "label": "Hide Module In Desktop"
   }
  ],
- "modified": "2019-11-25 14:11:14.323372",
+ "modified": "2019-12-29 20:21:16.858707",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Kard Desktop Icon",

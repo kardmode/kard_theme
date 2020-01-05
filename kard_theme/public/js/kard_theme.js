@@ -2,18 +2,37 @@ frappe.provide('frappe.desktop');
 
 $(window).on('hashchange', function() {
 	let route_str = frappe.get_route_str();
+	let route = route_str.split('/');
 	if(!route_str)
 	{
 		frappe.desktop.load_shortcuts();	
 	}	
-	
+	else if(route[0] == "modules")
+	{
+		// var page = frappe.ui.pages[route_str] 
+		// console.log(page);
+		// page.add_action_btn(section.icon,section.label, function(){
+							
+							// setup_rightbar(section.items,section.icon,section.label);
+						// });
+	}
 });
  
 $(document).ready(function() {
 	let route_str = frappe.get_route_str();
+	let route = route_str.split('/');
 	if(!route_str)
 	{
 		frappe.desktop.load_shortcuts();		
+	}
+	else if(route[0] == "modules")
+	{
+		// var page = frappe.ui.pages[route_str] 
+		// console.log(page);
+		// page.add_action_btn(section.icon,section.label, function(){
+							
+							// setup_rightbar(section.items,section.icon,section.label);
+						// });
 	}
 });
 
@@ -31,6 +50,12 @@ $(document).ajaxComplete(function() {
 		}
 	}
 	let route_str = frappe.get_route_str();
+	let route = route_str.split('/');
+	if(!route_str)
+	{
+		// frappe.desktop.load_shortcuts();		
+	}
+	
 
 });
  
@@ -164,8 +189,7 @@ $.extend(frappe.desktop, {
 			// frappe.desktop.show_pending_notifications();
 		// });
 		
-		
-		if(settings.hide_default_desktop == 1)
+		setTimeout(function(){ if(settings.hide_default_desktop == 1)
 		{
 			$('#page-desktop').find('.modules-page-container').addClass("hide");
 		}
@@ -173,7 +197,9 @@ $.extend(frappe.desktop, {
 		{
 			
 			$('#page-desktop').find('.modules-page-container').removeClass("hide");
-		}
+		} }, 500);
+
+		
 		
 	},
 	
@@ -198,7 +224,8 @@ $.extend(frappe.desktop, {
 
 		modules.sort((a, b) => (a.idx > b.idx) ? 1 : -1)
 		
-		desktop_icons_id.setAttribute("class", "icon-grid");
+		let icon_grid = document.createElement('div');
+		icon_grid.setAttribute("class", "icon-grid");
 		
 		var addedIcons =false;	
 		modules.forEach(m => {
@@ -232,19 +259,21 @@ $.extend(frappe.desktop, {
 		
 			
 			
-			let label_wrapper = '<div class="case-wrapper" title="'+m.label+'" data-name="'+m.module_name+'" data-link="'+m.route+'">'
-			+ '<div class="app-icon" style="background-color:'+ m.color +'"><i class="'+m.icon+'"></i></div>'
-			+ '<div class="case-label ellipsis">'
+			let label_wrapper = '<div class="kt-case-wrapper" title="'+m.label+'" data-name="'+m.module_name+'" data-link="'+m.route+'">'
+			+ '<div class="kt-app-icon" style="background-color:'+ m.color +'"><i class="'+m.icon+'"></i>'
 			+ '<div class="circle module-notis hide" data-doctype="'+m.module_name+'"><span class="circle-text"></span></div>'
-			+ '<span class="case-label-text">' + m.label + '</span>' 
+			+ '<div class="circle module-remove hide"><div class="circle-text"><b>&times</b></div></div>'
 			+ '</div>'
-			+ '<div class="circle hide module-remove"><div class="circle-text"><b>&times</b></div></div>'
+			+ '<div class="kt-case-label ellipsis">'
+			+ '<span class="kt-case-label-text">' + m.label + '</span>' 
+			+ '</div>'
 			+ '</div>';
 							
-			desktop_icons_id.innerHTML = desktop_icons_id.innerHTML + label_wrapper;
+			icon_grid.innerHTML = icon_grid.innerHTML + label_wrapper;
 			addedIcons = true;
 		})
 		
+		desktop_icons_id.prepend(icon_grid);
 		desktop_icons_id.prepend(title);
 		
 		if(addedIcons === false)
@@ -274,7 +303,7 @@ $.extend(frappe.desktop, {
 			+ '<ul class="module-sidebar-nav overlay-sidebar nav nav-pills nav-stacked">'
 			
 		modules.forEach(m => {
-			if (m.standard === 0 ||m.blocked === 1 || m.type !=="module") {  return; }
+			if (m.standard === 0 || m.blocked === 1 || m.type !=="module" || m.hidden === 1) { return; }
 			if(!m.route) {
 				if(m.link) {
 					m.route=strip(m.link, "#");
@@ -299,7 +328,7 @@ $.extend(frappe.desktop, {
 					m.route="#modules/" + m.module_name;
 				}
 			}
-			let module_link = '<li class="strong module-sidebar-item">'
+			let label_wrapper = '<li class="strong module-sidebar-item">'
 			+ '<a class="module-link" data-name="'+ m.module_name + '" href="'+ m.route + '">'
 			+ '<i class="fa fa-chevron-right pull-right" style="display: none;"></i>'
 			+ '<span class="sidebar-icon" style="background-color: '+ m.color + '"><i class="'+ m.icon + '"></i></span>'
@@ -307,7 +336,7 @@ $.extend(frappe.desktop, {
 			+ '</a>'
 			+ '</li>';
 
-			ul_wrapper.innerHTML = ul_wrapper.innerHTML + module_link;
+			ul_wrapper.innerHTML = ul_wrapper.innerHTML + label_wrapper;
 			
 		});
 		
@@ -319,18 +348,18 @@ $.extend(frappe.desktop, {
 		
 		let desktop_icons_id = document.createElement('div');
 		desktop_icons_id.setAttribute("id", "desktop-modules");
-		$(desktop_icons_id).addClass("icon-grid");
 				
 		let title = document.createElement('div');
 		title.setAttribute("class", "h6 uppercase");
 		title.innerHTML = "Modules";
 		
+		let icon_grid = document.createElement('div');
+		icon_grid.setAttribute("class", "icon-grid");
 		
 		modules.sort((a, b) => (a.module_name > b.module_name) ? 1 : -1)
 		var addedIcons = false;
 		modules.forEach(m => {
-			if (m.standard === 0 ||m.blocked === 1 || m.type !=="module") { 
-			return; }
+			if (m.standard === 0 || m.blocked === 1 || m.type !=="module" || m.hidden === 1) { return; }
 			if(!m.route) {
 				if(m.link) {
 					m.route=strip(m.link, "#");
@@ -356,19 +385,21 @@ $.extend(frappe.desktop, {
 				}
 			}
 			
-			let module_link = '<div class="case-wrapper" title="'+m.label+'" data-name="'+m.module_name+'" data-link="'+m.route+'">'
-			+ '<div class="app-icon" style="background-color:'+ m.color +'"><i class="'+m.icon+'"></i></div>'
-			+ '<div class="case-label ellipsis">'
+			let label_wrapper = '<div class="kt-case-wrapper" title="'+m.label+'" data-name="'+m.module_name+'" data-link="'+m.route+'">'
+			+ '<div class="kt-app-icon" style="background-color:'+ m.color +'"><i class="'+m.icon+'"></i>'
 			+ '<div class="circle module-notis hide" data-doctype="'+m.module_name+'"><span class="circle-text"></span></div>'
-			+ '<span class="case-label-text">' + m.label + '</span>' 
+			+ '<div class="circle module-remove hide"><div class="circle-text"><b>&times</b></div></div>'
 			+ '</div>'
-			+ '<div class="circle hide module-remove" style="background-color:#E0E0E0; color:#212121"><div class="circle-text"><b>&times</b></div></div>'
+			+ '<div class="kt-case-label ellipsis">'
+			+ '<span class="kt-case-label-text">' + m.label + '</span>' 
+			+ '</div>'
 			+ '</div>';
 			
-			desktop_icons_id.innerHTML = desktop_icons_id.innerHTML + module_link;
+			icon_grid.innerHTML = icon_grid.innerHTML + label_wrapper;
 			addedIcons = true;
 		});
 		
+		desktop_icons_id.prepend(icon_grid);
 		desktop_icons_id.prepend(title);
 		
 		if(addedIcons === false)
@@ -440,7 +471,7 @@ $.extend(frappe.desktop, {
 	setup_user_bookmark_click: function(wrapper) {
 		frappe.desktop.wiggling = false;
 
-		wrapper.on("click", ".app-icon, .app-icon-svg", function() {
+		wrapper.on("click", ".kt-app-icon, .kt-app-icon-svg", function() {
 			if ( !frappe.desktop.wiggling ) {
 				frappe.desktop.open_user_shortcut($(this).parent());
 			}
@@ -458,7 +489,7 @@ $.extend(frappe.desktop, {
 	setup_module_click: function(wrapper) {
 		frappe.desktop.wiggling = false;
 
-		wrapper.on("click", ".app-icon, .app-icon-svg", function() {
+		wrapper.on("click", ".kt-app-icon, .kt-app-icon-svg", function() {
 			if ( !frappe.desktop.wiggling ) {
 				
 				frappe.desktop.open_module($(this).parent());
@@ -479,12 +510,12 @@ $.extend(frappe.desktop, {
 		const DURATION_LONG_PRESS = 1200;
 
 		var   timer_id      = 0;
-		const $cases        = wrapper.find('.case-wrapper');
-		const $icons        = wrapper.find('.app-icon');
+		const $cases        = wrapper.find('.kt-case-wrapper');
+		const $icons        = wrapper.find('.kt-app-icon');
 		
 		const clearWiggle   = () => {
-			const $cases        = wrapper.find('.case-wrapper');
-			const $icons        = wrapper.find('.app-icon');
+			const $cases        = wrapper.find('.kt-case-wrapper');
+			const $icons        = wrapper.find('.kt-app-icon');
 			let $notis        = $(wrapper.find('.module-notis').toArray().filter((object) => {
 				const text      = $(object).find('.circle-text').html();
 				
@@ -505,7 +536,7 @@ $.extend(frappe.desktop, {
 			
 		
 		
-		wrapper.on('mousedown touchstart', '.app-icon', () => {
+		wrapper.on('mousedown touchstart', '.kt-app-icon', () => {
 			timer_id     = setTimeout(() => {
 				frappe.desktop.sortableEnable();
 				frappe.desktop.wiggling = true;
@@ -569,7 +600,7 @@ $.extend(frappe.desktop, {
 
 			}, DURATION_LONG_PRESS);
 		});
-		wrapper.on('mouseup mouseleave touchend', '.app-icon', () => {
+		wrapper.on('mouseup mouseleave touchend', '.kt-app-icon', () => {
 			clearTimeout(timer_id);
 		});
 		
@@ -580,8 +611,8 @@ $.extend(frappe.desktop, {
 		$('body').click((event) => {
 			if ( frappe.desktop.wiggling ) {
 				const $target = $(event.target);
-				// our target shouldn't be .app-icons or .close
-				const $parent = $target.parents('.case-wrapper');
+				// our target shouldn't be .kt-app-icons or .close
+				const $parent = $target.parents('.kt-case-wrapper');
 				if ( $parent.length == 0 )
 					clearWiggle();
 			}
@@ -709,7 +740,7 @@ $.extend(frappe.desktop, {
 			onUpdate: function(event) {
 				var new_order = [];
 				
-				const $cases = $(wrapper).find('.case-wrapper');
+				const $cases = $(wrapper).find('.kt-case-wrapper');
 
 				$cases.each(function(i, e) {
 					new_order.push($(this).attr("data-name"));
@@ -983,4 +1014,75 @@ frappe.add_to_desktop_link = function(toolbar) {
 	}
 		
 };
+
+frappe.setup_module_rightbar = function(items,icon,title) {
+	var layout_side_section = $('.layout-side-section.layout-right');
+	layout_side_section.empty();
+	
+	var section_style = '';
+	if(icon)
+		section_style = 'margin-left:5px;';
+	section_style = 'font-size:larger;';
+	var $group = $('<div class="list-sidebar overlay-rightbar">').appendTo(layout_side_section);
+	var $groupul = $('<ul class="list-unstyled sidebar-menu standard-actions"><li><div><span style="'+section_style+'" class="">' + title + '</span></div></li><li class="divider"></li>').appendTo($group);
+	
+	
+	
+	items.forEach(function(item) {
+		var label = item.label || item.name;
+		var style = '';
+		if(item.icon)
+			style = 'margin-left:5px;';
+		var $li = $('<li class="list-sidebar-item"><a class="list-sidebar-link" href="'+ "#"+item.route +'"><i class="'+item.icon+'"></i><span style="'+style+'">'+ label +'</span></a></li>');
+		$li.appendTo($groupul);
+	});
+	
+	var overlay_sidebar = layout_side_section.find('.overlay-rightbar');
+
+	overlay_sidebar.addClass('opened');
+	overlay_sidebar.find('.reports-dropdown')
+		.removeClass('dropdown-menu')
+		.addClass('list-unstyled');
+	overlay_sidebar.find('.kanban-dropdown')
+		.removeClass('dropdown-menu')
+		.addClass('list-unstyled');
+	overlay_sidebar.find('.dropdown-toggle')
+		.addClass('text-muted').find('.caret')
+		.addClass('hidden-xs hidden-sm');
+
+	var close_sidebar_div = $('.close-sidebar');
+	var fadespeed = 50;
+	if (close_sidebar_div.length !== 0)
+	{
+		close_sidebar_div.hide().fadeIn(fadespeed);
+	}
+	else{
+		//$('<div class="close-sidebar">').hide().appendTo(layout_side_section).fadeIn(fadespeed);
+	}
+	
+
+	var scroll_container = $('html');
+	scroll_container.css("overflow-y", "hidden");
+
+	close_sidebar_div.on('click', close_sidebar);
+				close_sidebar_div.on('touchmove', function (e) { e.preventDefault(); }); 
+
+	layout_side_section.on("click", "a", close_sidebar);
+
+	function close_sidebar(e) {
+		scroll_container.css("overflow-y", "");
+
+					close_sidebar_div.fadeOut(50,function() {
+			overlay_sidebar.removeClass('opened')
+				.find('.dropdown-toggle')
+				.removeClass('text-muted');
+			overlay_sidebar.find('.reports-dropdown')
+				.addClass('dropdown-menu');
+			overlay_sidebar.find('.kanban-dropdown')
+				.addClass('dropdown-menu');
+				
+		});
+	}
+};
+	
 	

@@ -117,7 +117,7 @@ boot_session = "kard_theme.kard_theme.utils.boot_session"
 # Overriding Whitelisted Methods
 # ------------------------------
 #
-# override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "kard_theme.event.get_events"
-# }
+override_whitelisted_methods = {
+	"frappe.desk.moduleview.get": "kard_theme.kard_theme.doctype.kard_theme_settings.kard_theme_settings.get"
+}
 

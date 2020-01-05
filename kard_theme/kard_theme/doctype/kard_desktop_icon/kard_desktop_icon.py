@@ -120,33 +120,34 @@ def get_standard_icons(user=None):
 
 		active_domains = frappe.get_active_domains()
 
-		blocked_doctypes = frappe.get_all("Module Def", filters={
+		domain_blocked_modules		= frappe.get_all("Module Def", filters={
 			"ifnull(restrict_to_domain, '')": ("not in", ",".join(active_domains))
 		}, fields=["name"])
 
-		blocked_doctypes = [ d.get("name") for d in blocked_doctypes ]
-
-
+		domain_blocked_modules = [ d.get("name") for d in domain_blocked_modules ]
+		user_blocked_modules = frappe.get_doc('User', user).get_blocked_modules()
+		blocked_modules = domain_blocked_modules + user_blocked_modules
+		
 		standard_icons = frappe.db.get_all('Kard Desktop Icon',
 			fields=fields, filters={'standard': 1,'type':'module'})
 
-		for icon in standard_icons:
-			if icon.module_name in blocked_doctypes:
-				icon.blocked = 1
+		from kard_theme.kard_theme.doctype.kard_theme_settings.kard_theme_settings import get_data
 
-		user_blocked_modules = frappe.get_doc('User', user).get_blocked_modules()
+
 		for icon in standard_icons:
-			if icon.module_name in user_blocked_modules:
+			if icon.module_name in blocked_modules:
 				icon.blocked = 1
 				icon.hidden = 1
-
-		# translate
-		for d in standard_icons:
-			if d.label: d.label = _(d.label)
+			# if not get_data(icon.module_name):
+				# icon.blocked = 1
+				# icon.hidden = 1
+			if icon.label: icon.label = _(icon.label)
 
 		# sort by label
 		standard_icons.sort(key = lambda a: a.label)				
 
+
+		
 		# frappe.cache().hset('standard_icons', user, standard_icons)
 
 	
