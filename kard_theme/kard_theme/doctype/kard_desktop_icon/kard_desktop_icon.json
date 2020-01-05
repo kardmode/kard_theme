@@ -14,7 +14,6 @@
   "category",
   "hidden",
   "blocked",
-  "hide_module_in_desktop",
   "force_show",
   "section_break_7",
   "type",
@@ -24,14 +23,15 @@
   "column_break_10",
   "color",
   "icon",
-  "reverse",
-  "idx"
+  "idx",
+  "reverse"
  ],
  "fields": [
   {
    "fieldname": "module_name",
    "fieldtype": "Data",
-   "label": "Module Name"
+   "label": "Module Name",
+   "reqd": 1
   },
   {
    "fieldname": "label",
@@ -60,7 +60,8 @@
   {
    "fieldname": "app",
    "fieldtype": "Data",
-   "label": "App"
+   "label": "App",
+   "reqd": 1
   },
   {
    "fieldname": "description",
@@ -136,24 +137,18 @@
    "label": "Icon"
   },
   {
-   "default": "0",
-   "fieldname": "reverse",
-   "fieldtype": "Check",
-   "label": "Reverse Icon Color"
-  },
-  {
    "fieldname": "idx",
    "fieldtype": "Int",
    "label": "Idx"
   },
   {
    "default": "0",
-   "fieldname": "hide_module_in_desktop",
+   "fieldname": "reverse",
    "fieldtype": "Check",
-   "label": "Hide Module In Desktop"
+   "label": "reverse"
   }
  ],
- "modified": "2019-12-29 20:21:16.858707",
+ "modified": "2020-01-05 21:45:37.093872",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Kard Desktop Icon",

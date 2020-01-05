@@ -28,13 +28,24 @@ def get_desktop_icons(user=None):
 	if not user:
 		user = frappe.session.user
 
-	user_icons = frappe.cache().hget('desktop_icons', user)
+	all_icons = frappe.cache().hget('desktop_icons', user)
+	
+	if not all_icons:
+		all_icons = {}
+		all_icons["user_icons"] = []
+		all_icons["standard_icons"] = []
+	
+	user_icons = all_icons.get("user_icons") or []
 
-	if not user_icons:
-		fields = ['module_name', 'hidden', 'label', 'link', 'type', 'icon', 'color', 'description', 'category',
+	set_cache = False
+	
+	fields = ['module_name', 'hidden', 'label', 'link', 'type', 'icon', 'color', 'description', 'category',
 			'_doctype', '_report', 'idx', 'force_show', 'reverse', 'custom', 'standard', 'blocked']
 
-		active_domains = frappe.get_active_domains()
+	active_domains = frappe.get_active_domains()
+	
+	if not user_icons:
+		
 
 		blocked_doctypes = frappe.get_all("DocType", filters={
 			"ifnull(restrict_to_domain, '')": ("not in", ",".join(active_domains))
@@ -100,25 +111,15 @@ def get_desktop_icons(user=None):
 		# translate
 		for d in user_icons:
 			if d.label: d.label = _(d.label)
+		
+		set_cache = True
+		all_icons["user_icons"] = user_icons
 
-		frappe.cache().hset('desktop_icons', user, user_icons)
-
-	return user_icons
-
-@frappe.whitelist()
-def get_standard_icons(user=None):
-	'''Return standard icons for user'''
-	if not user:
-		user = frappe.session.user
-
-	# standard_icons = frappe.cache().hget('standard_icons', user)
-	standard_icons = []
-
+	
+	standard_icons = all_icons.get("standard_icons") or []
+	
 	if not standard_icons:
-		fields = ['module_name', 'hidden', 'label', 'link', 'type', 'icon', 'color', 'description', 'category',
-			'_doctype', '_report', 'idx', 'force_show', 'reverse', 'custom', 'standard', 'blocked']
-
-		active_domains = frappe.get_active_domains()
+		
 
 		domain_blocked_modules		= frappe.get_all("Module Def", filters={
 			"ifnull(restrict_to_domain, '')": ("not in", ",".join(active_domains))
@@ -143,15 +144,39 @@ def get_standard_icons(user=None):
 				# icon.hidden = 1
 			if icon.label: icon.label = _(icon.label)
 
+
+		# translate
+		for d in standard_icons:
+			if d.label: d.label = _(d.label)
+			
 		# sort by label
-		standard_icons.sort(key = lambda a: a.label)				
-
-
-		
-		# frappe.cache().hset('standard_icons', user, standard_icons)
-
+		standard_icons.sort(key = lambda a: a.label)		
 	
-	return standard_icons
+	
+		set_cache = True
+		
+		
+		module_categories =  frappe.get_list("Kard Desktop Category", fields=["name"],order_by="idx")
+		
+		from collections import OrderedDict 
+
+
+		user_modules_by_category = OrderedDict() 
+		
+		
+		user_modules_by_category_sorted = []
+		for category in module_categories:
+			user_modules_by_category[category.name] = [m for m in standard_icons if m.get('category') == category.name]
+						
+		
+		all_icons["standard_icons"] = user_modules_by_category
+
+
+	if set_cache:
+		frappe.cache().hset('desktop_icons', user, all_icons)
+		
+	return all_icons
+
 
 @frappe.whitelist()
 def add_user_icon(_doctype, _report=None, label=None, link=None, type='link', standard=0):

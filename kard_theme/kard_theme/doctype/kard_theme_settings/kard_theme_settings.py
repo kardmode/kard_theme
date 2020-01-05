@@ -7,7 +7,6 @@ from six import iteritems
 import frappe
 from frappe import _
 from frappe.desk.moduleview import combine_common_sections,apply_permissions
-from kard_theme.kard_theme.doctype.kard_desktop_icon.kard_desktop_icon import get_desktop_icons,get_standard_icons
 from frappe.model.document import Document
 
 class KardThemeSettings(Document):
@@ -82,10 +81,12 @@ class KardThemeSettings(Document):
 	
 @frappe.whitelist()
 def get_theme_info():
+	from kard_theme.kard_theme.doctype.kard_desktop_icon.kard_desktop_icon import get_desktop_icons
 
-	settings = frappe.get_single('Kard Theme Settings')
-	user_icons = get_desktop_icons()
-	standard_icons = get_standard_icons()
+	settings = get_theme_settings()
+	all_icons = get_desktop_icons()
+	user_icons = all_icons.get("user_icons")
+	standard_icons = all_icons.get("standard_icons")
 	
 	return settings,user_icons,standard_icons
 	
@@ -179,8 +180,8 @@ def add_section(data, label, icon, items,color="#7f8c8d",shown_in="module_view")
 	})
 	
 def add_custom_doctypes(data, doctype_info,module):
-	custom_links =  frappe.get_list("MRP Module Section", fields=["name", "icon", "shown_in"],order_by="name")
-	for link in custom_links:
+	sections =  frappe.get_list("MRP Module Section", fields=["name", "icon", "shown_in"],order_by="name")
+	for link in sections:
 		if link.shown_in != "none":
 			add_section(data, _(link.name), link.icon,
 				[d for d in doctype_info if (d.document_type == link.name)],link.color,link.shown_in)
@@ -296,3 +297,57 @@ def get_custom_report_list(module):
 		})
 
 	return out
+
+
+
+
+@frappe.whitelist()
+def get_desktop_settings():
+	from frappe.config import get_modules_from_all_apps_for_user
+	from frappe.desk.moduleview import get_home_settings
+
+	all_modules = get_modules_from_all_apps_for_user()
+	home_settings = get_home_settings()
+
+	modules_by_name = {}
+	for m in all_modules:
+		modules_by_name[m['module_name']] = m
+
+	module_categories = ['Modules', 'Domains', 'Places', 'Administration']
+	user_modules_by_category = {}
+
+	user_saved_modules_by_category = home_settings.modules_by_category or {}
+	user_saved_links_by_module = home_settings.links_by_module or {}
+
+	def apply_user_saved_links(module):
+		module = frappe._dict(module)
+		
+		from frappe.desk.moduleview import get_links
+		all_links = get_links(module.app, module.module_name)
+		module_links_by_name = {}
+		for link in all_links:
+			module_links_by_name[link['name']] = link
+
+		if module.module_name in user_saved_links_by_module:
+			user_links = frappe.parse_json(user_saved_links_by_module[module.module_name])
+			module.links = [module_links_by_name[l] for l in user_links if l in module_links_by_name]
+
+		return module
+
+	for category in module_categories:
+		if category in user_saved_modules_by_category:
+			user_modules = user_saved_modules_by_category[category]
+			user_modules_by_category[category] = [apply_user_saved_links(modules_by_name[m]) \
+				for m in user_modules if modules_by_name.get(m)]
+		else:
+			user_modules_by_category[category] = [apply_user_saved_links(m) \
+				for m in all_modules if m.get('category') == category]
+
+	# filter out hidden modules
+	if home_settings.hidden_modules:
+		for category in user_modules_by_category:
+			hidden_modules = home_settings.hidden_modules or []
+			modules = user_modules_by_category[category]
+			user_modules_by_category[category] = [module for module in modules if module.module_name not in hidden_modules]
+
+	return user_modules_by_category

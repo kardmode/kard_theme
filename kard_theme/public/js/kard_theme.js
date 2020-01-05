@@ -120,13 +120,23 @@ $.extend(frappe.desktop, {
 			// frappe.desktop.sort_inst.push(frappe.desktop.make_sortable($(desktop_icons_id).get(0)));			
 		}
 		
-		if(settings.enable_module_header == 1)
+		if(settings.enable_module_header)
 		{
-			let newNode = frappe.desktop.render_module_desktop_icons(frappe.desktop.modules);
-			new_container_div.appendChild(newNode);
-			frappe.desktop.setup_module_click($(newNode));
-			// frappe.desktop.setup_wiggle($(newNode));
-			// frappe.desktop.sort_inst.push(frappe.desktop.make_sortable($(newNode).get(0)));			
+			
+		
+			for(key in frappe.desktop.modules){
+
+				let m = frappe.desktop.modules[key];
+				
+				let newNode = frappe.desktop.render_module_desktop_icons(m,key);
+				new_container_div.appendChild(newNode);
+				frappe.desktop.setup_module_click($(newNode));
+				// frappe.desktop.setup_wiggle($(newNode));
+				// frappe.desktop.sort_inst.push(frappe.desktop.make_sortable($(newNode).get(0)));	
+			}
+			
+			
+		
 						
 			var overlay_sidebar = document.createElement('div');
 			overlay_sidebar.setAttribute("id", "overlay-sidebar");
@@ -157,15 +167,18 @@ $.extend(frappe.desktop, {
 		
 		let div_clearfix = document.createElement('div');
 		$(div_clearfix).addClass("clearfix");
-		// new_container_div.appendChild(div_clearfix);
 		frappe.desktop.container_wrapper.prepend(div_clearfix);
-
 		frappe.desktop.container_wrapper.prepend(new_container_div);
+		
+		
 		if(settings.enable_module_sidebar)
-		{
-			let sidebar_icons_id = frappe.desktop.render_module_sidebar(frappe.desktop.modules);
-			frappe.desktop.container_wrapper.prepend(sidebar_icons_id);	
-			// frappe.desktop.setup_user_bookmark_click( $(sidebar_icons_id));
+		{	
+			
+			let newNode = frappe.desktop.render_module_sidebar();
+
+			frappe.desktop.container_wrapper.prepend(newNode);	
+			frappe.desktop.setup_user_bookmark_click($(newNode));
+			
 			$(new_container_div).addClass("col-md-9");
 			$(new_container_div).removeClass("col-md-12");
 			$(".module-page-container").addClass("col-md-9");
@@ -216,7 +229,7 @@ $.extend(frappe.desktop, {
 	
 	render_user_desktop_icons: function(modules) {
 		let desktop_icons_id = document.createElement('div');
-		desktop_icons_id.setAttribute("id", "desktop-icons");
+		desktop_icons_id.setAttribute("class", "desktop-icons");
 		
 		let title = document.createElement('div');
 		title.setAttribute("class", "h6 uppercase");
@@ -290,68 +303,89 @@ $.extend(frappe.desktop, {
 	
 	},
 	
-	render_module_sidebar: function(modules) {
-		let desktop_icons_id = document.createElement('div');
-		desktop_icons_id.setAttribute("id", "desktop-sidebar");
-		$(desktop_icons_id).addClass("col-md-3 layout-side-section layout-left");
-		
+	render_module_sidebar: function() {
+		let sidebar_div = document.createElement('div');
+		sidebar_div.setAttribute("id", "desktop-sidebar");
+		$(sidebar_div).addClass("col-md-3 layout-side-section layout-left");
 		let ul_wrapper = document.createElement('ul');
 		$(ul_wrapper).addClass("module-sidebar-nav overlay-sidebar nav nav-pills nav-stacked");
-
 		
-		let sidebar_html = '<div id="desktop-sidebar" class="col-md-3 layout-side-section layout-left">'
-			+ '<ul class="module-sidebar-nav overlay-sidebar nav nav-pills nav-stacked">'
+		
+		for(key in frappe.desktop.modules){
 			
-		modules.forEach(m => {
-			if (m.standard === 0 || m.blocked === 1 || m.type !=="module" || m.hidden === 1) { return; }
-			if(!m.route) {
-				if(m.link) {
-					m.route=strip(m.link, "#");
-				}
-				else if(m.type==="doctype") {
-					if(frappe.model.is_single(m._doctype)) {
-						m.route = 'Form/' + m._doctype;
-					} else {
-						m.route="List/" + m._doctype;
+			let modules = frappe.desktop.modules[key];
+			
+			modules.sort((a, b) => (a.module_name > b.module_name) ? 1 : -1)
+			
+			let addedIcons = false;
+			let moduleHTML = "";
+			modules.forEach(m => {
+				if (m.standard === 0 || m.blocked === 1 || m.type !=="module" || m.hidden === 1) { return; }
+				if(!m.route) {
+					if(m.link) {
+						m.route=strip(m.link, "#");
+					}
+					else if(m.type==="doctype") {
+						if(frappe.model.is_single(m._doctype)) {
+							m.route = 'Form/' + m._doctype;
+						} else {
+							m.route="List/" + m._doctype;
+						}
+					}
+					else if(m.type==="query-report") {
+						m.route="query-report/" + item.module_name;
+					}
+					else if(m.type==="report") {
+						m.route="List/" + m.doctype + "/Report/" + m.module_name;
+					}
+					else if(m.type==="page") {
+						m.route=m.module_name;
+					}
+					else if(m.type==="module") {
+						m.route="#modules/" + m.module_name;
 					}
 				}
-				else if(m.type==="query-report") {
-					m.route="query-report/" + item.module_name;
-				}
-				else if(m.type==="report") {
-					m.route="List/" + m.doctype + "/Report/" + m.module_name;
-				}
-				else if(m.type==="page") {
-					m.route=m.module_name;
-				}
-				else if(m.type==="module") {
-					m.route="#modules/" + m.module_name;
-				}
-			}
-			let label_wrapper = '<li class="strong module-sidebar-item">'
-			+ '<a class="module-link" data-name="'+ m.module_name + '" href="'+ m.route + '">'
-			+ '<i class="fa fa-chevron-right pull-right" style="display: none;"></i>'
-			+ '<span class="sidebar-icon" style="background-color: '+ m.color + '"><i class="'+ m.icon + '"></i></span>'
-			+ '<span class="ellipsis">'+ m.label + '</span>'
-			+ '</a>'
-			+ '</li>';
-
-			ul_wrapper.innerHTML = ul_wrapper.innerHTML + label_wrapper;
-			
-		});
+				let label_wrapper = '<li class="strong module-sidebar-item">'
+				+ '<a class="module-link" data-name="'+ m.module_name + '" href="'+ m.route + '">'
+				+ '<span class="sidebar-icon" style="background-color: '+ m.color + '"><i class="'+ m.icon + '"></i></span>'
+				+ '<span class="ellipsis">'+ m.label + '</span>'
+				+ '</a>'
+				+ '</li>';
+				
+				moduleHTML = moduleHTML + label_wrapper;
+				addedIcons = true;
+				
+			});
 		
-		desktop_icons_id.prepend(ul_wrapper);
-		return desktop_icons_id;
+			
+			if(addedIcons === false)
+			{
+			}
+			else
+			{
+				let title_div = document.createElement('div');
+				title_div.setAttribute("class", "h6 uppercase");
+				title_div.innerHTML = key + moduleHTML;				
+				ul_wrapper.appendChild(title_div);
+			}
+			
+		}
+		
+	
+		sidebar_div.appendChild(ul_wrapper);
+	
+		
+		return sidebar_div;
 	},
 	
-	render_module_desktop_icons: function(modules) {
+	render_module_desktop_icons: function(modules,title) {
 		
 		let desktop_icons_id = document.createElement('div');
-		desktop_icons_id.setAttribute("id", "desktop-modules");
+		desktop_icons_id.setAttribute("class", "desktop-icons");
 				
-		let title = document.createElement('div');
-		title.setAttribute("class", "h6 uppercase");
-		title.innerHTML = "Modules";
+		let title_div = document.createElement('div');
+		title_div.setAttribute("class", "h6 uppercase");
+		title_div.innerHTML = title;
 		
 		let icon_grid = document.createElement('div');
 		icon_grid.setAttribute("class", "icon-grid");
@@ -399,16 +433,21 @@ $.extend(frappe.desktop, {
 			addedIcons = true;
 		});
 		
-		desktop_icons_id.prepend(icon_grid);
-		desktop_icons_id.prepend(title);
+		
 		
 		if(addedIcons === false)
 		{
-			let msg = document.createElement('div');
+			// let msg = document.createElement('div');
 			// msg.setAttribute("class", "h6 uppercase");
-			msg.innerHTML = "No Bookmarks Added";
-
-			desktop_icons_id.appendChild(msg);
+			// msg.innerHTML = "No Bookmarks Added";
+			
+			// desktop_icons_id.appendChild(msg);
+			
+		}
+		else
+		{
+			desktop_icons_id.prepend(icon_grid);
+			desktop_icons_id.prepend(title_div);
 			
 		}
 			

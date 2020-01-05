@@ -1,21 +1,30 @@
-## Kard Theme
+Kard Theme
 
-Custom Frappe Theme.
-Customizes the Frappe v12 Desktop.
-
-Add Desktop Shorcuts as in v11. With the ability to sort and hide.
-Adds a sidebar with a list of allowed Modules.
-Can hide the current v12 Desktop Cards.
-
+Custom Frappe Theme for v12 Desktop as well as some other css changes.
 Has a settings page that customizes the theme.
 
-The list of allowed desktop icons is stored in a doctype called desktop_icon.
 
-All entries flagged as standard and not blocked will be shown on the desktop.
+Option to add User Desktop Shortcuts as in v11. With the ability to sort and hide.
+Shortcuts can be of type doctype or report or custom link.
+Option to add a sidebar with a list of allowed modules.
+Option to add a grid of icons consisting of allowed modules.
+Option to hide the current v12 Desktop Cards.
+Adds a “Add to Desktop” link in the User Dropdown
+Only shows for doctypes, pages and reports.
 
-All entries flagged as standard, not blocked and are of type 'module' will be shown on the sidebar.
+
+Notes
+Frappe v11 used a doctype called desktop_icon to store user shortcuts, their order and standard shortcuts as well as icon appearance information.
+
+This theme stores this info in a custom doctype called kard_desktop_icon.
+
+Frappe v12 uses config files to determine what cards show on the desktop and what links/sections show on the module view page. 
+
+This theme uses kard_desktop_icon instead of config files. Adding an entry with type “module” and checked as standard will show as an icon on the module grid/sidebar and will have a module view page.
+
+The module view page shows all doctypes belonging to that module and displays them in sections.
+
+Work In Progress
 
 <img src="Screenshot.png"/>
 
-
-#### License
