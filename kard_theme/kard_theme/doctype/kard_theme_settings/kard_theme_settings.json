@@ -7,12 +7,15 @@
  "engine": "InnoDB",
  "field_order": [
   "enable_theme",
+  "section_break_2",
   "use_custom_home_page",
   "enable_bookmarks",
   "enable_module_sidebar",
   "enable_module_header",
   "hide_default_desktop",
   "enable_bookmark_sorting",
+  "enable_links_by_module",
+  "column_break_9",
   "initialize_standard_icons",
   "clear_user_icons",
   "sync_standard_icons",
@@ -80,10 +83,24 @@
    "fieldname": "use_custom_home_page",
    "fieldtype": "Check",
    "label": "Use Custom Home Page"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_links_by_module",
+   "fieldtype": "Check",
+   "label": "Enable Links By Module"
+  },
+  {
+   "fieldname": "column_break_9",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_2",
+   "fieldtype": "Section Break"
   }
  ],
  "issingle": 1,
- "modified": "2019-12-14 03:11:11.545123",
+ "modified": "2020-01-13 22:47:27.657064",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Kard Theme Settings",

@@ -5,8 +5,11 @@
 from __future__ import unicode_literals
 from six import iteritems
 import frappe
+import json
 from frappe import _
 from frappe.desk.moduleview import combine_common_sections,apply_permissions
+from kard_theme.kard_theme.doctype.kard_desktop_icon.kard_desktop_icon import get_desktop_icons,clear_desktop_icons_cache
+from frappe.desk.moduleview import (get_onboard_items)
 from frappe.model.document import Document
 
 class KardThemeSettings(Document):
@@ -74,17 +77,15 @@ class KardThemeSettings(Document):
 			# new_doc = {}
 			# for key in desktop_icons:
 				# new_doc[key] = m.key
-				# frappe.errprint(m[key])
 			m['doctype'] = 'Kard Desktop Icon'
 			frappe.get_doc(m).insert()
 		
 	
 @frappe.whitelist()
 def get_theme_info():
-	from kard_theme.kard_theme.doctype.kard_desktop_icon.kard_desktop_icon import get_desktop_icons
 
 	settings = get_theme_settings()
-	all_icons = get_desktop_icons()
+	all_icons = get_desktop_icons(enable_links_by_module = settings.enable_links_by_module)
 	user_icons = all_icons.get("user_icons")
 	standard_icons = all_icons.get("standard_icons")
 	
@@ -92,9 +93,7 @@ def get_theme_info():
 	
 @frappe.whitelist()
 def get_theme_settings():
-
 	settings = frappe.get_single('Kard Theme Settings')
-	
 	return settings
 	
 @frappe.whitelist()
@@ -116,7 +115,18 @@ def get_data(module, build=True):
 			
 	data = combine_common_sections(data)
 	data = apply_permissions(data)
-
+	
+	if len(data) == 0:
+		items = []
+		data.append({
+			"label": "No Entries",
+			"icon": "fa fa-file-directory",
+			"items":items,
+			"color": "#7f8c8d",
+			"shown_in":"module_view"
+		})
+	
+	
 	# set_last_modified(data)
 
 	# if build:
@@ -217,10 +227,6 @@ def get_doctype_info(module):
 	for d in doctype_info:
 		d.document_type = d.document_type or ""
 		d.description = _(d.description or "")
-		# if ('icon' not in d):
-			# d["icon"] = "fa fa-file-text"
-		# elif d.icon == "" or d.icon == None:
-			# d["icon"] = "fa fa-file-text"
 		d["icon"] = ""
 	return doctype_info
 
@@ -303,7 +309,6 @@ def get_custom_report_list(module):
 
 @frappe.whitelist()
 def get_desktop_settings():
-	from frappe.config import get_modules_from_all_apps_for_user
 	from frappe.desk.moduleview import get_home_settings
 
 	all_modules = get_modules_from_all_apps_for_user()
@@ -313,10 +318,14 @@ def get_desktop_settings():
 	for m in all_modules:
 		modules_by_name[m['module_name']] = m
 
-	module_categories = ['Modules', 'Domains', 'Places', 'Administration']
-	user_modules_by_category = {}
-
-	user_saved_modules_by_category = home_settings.modules_by_category or {}
+	categories =  frappe.get_list("Kard Desktop Category", fields=["name"],order_by="idx")
+	module_categories = []
+	for m in categories:
+		module_categories.append(m.name)
+		
+	from collections import OrderedDict 
+	user_modules_by_category = OrderedDict() 
+	user_saved_modules_by_category = {}
 	user_saved_links_by_module = home_settings.links_by_module or {}
 
 	def apply_user_saved_links(module):
@@ -351,3 +360,132 @@ def get_desktop_settings():
 			user_modules_by_category[category] = [module for module in modules if module.module_name not in hidden_modules]
 
 	return user_modules_by_category
+
+
+def get_modules_from_all_apps_for_user(user=None):
+	if not user:
+		user = frappe.session.user
+
+	from frappe.config import get_all_empty_tables_by_module
+	all_modules = get_modules_from_all_apps()
+	global_blocked_modules = frappe.get_doc('User', 'Administrator').get_blocked_modules()
+	user_blocked_modules = frappe.get_doc('User', user).get_blocked_modules()
+	blocked_modules = global_blocked_modules + user_blocked_modules
+	allowed_modules_list = [m for m in all_modules if m.get("module_name") not in blocked_modules]
+
+	empty_tables_by_module = get_all_empty_tables_by_module()
+
+	for module in allowed_modules_list:
+		module_name = module.get("module_name")
+
+		# Apply onboarding status
+		if module_name in empty_tables_by_module:
+			module["onboard_present"] = 1
+
+		# Set defaults links
+		module["links"] =  get_onboard_items(module["app"], frappe.scrub(module_name))[:5]
+
+	return allowed_modules_list
+
+def get_modules_from_all_apps():
+	modules_list = []
+	for app in frappe.get_installed_apps():
+		modules_list += get_modules_from_app(app)
+	return modules_list
+
+def get_modules_from_app(app):
+	try:		
+		fields = ['name','module_name', 'hidden', 'label', 'link', 'type', 'icon', 'color', 'description', 'category',
+			'_doctype', '_report', 'idx', 'force_show', 'reverse', 'custom', 'standard', 'blocked']
+
+		modules = frappe.db.get_all('Kard Desktop Icon',
+			fields=fields, filters={'standard': 1,'type':'module','app':app}) 
+
+	except ImportError:
+		return []
+
+	active_domains = frappe.get_active_domains()
+
+	if isinstance(modules, dict):
+		active_modules_list = []
+		for m, module in iteritems(modules):
+			module['module_name'] = m
+			module['app'] = app
+			active_modules_list.append(module)
+	else:
+		for m in modules:
+			if m.get("type") == "module" and "category" not in m:
+				m["category"] = "Modules"
+
+		# Only newly formatted modules that have a category to be shown on desk
+		modules = [m for m in modules if m.get("category")]
+		active_modules_list = []
+
+		for m in modules:
+			to_add = True
+			module_name = m.get("module_name")
+
+			# Check Domain
+			if is_domain(m) and module_name not in active_domains:
+				to_add = False
+				
+			if not in_domains(m,active_domains):
+				to_add = False
+
+			# Check if config
+			# if is_module(m) and not config_exists(app, frappe.scrub(module_name)):
+				# to_add = False
+				
+			if not is_module(m):
+				to_add = False
+
+			if "condition" in m and not m["condition"]:
+				to_add = False
+
+			if to_add:
+				m["app"] = app
+				active_modules_list.append(m)
+
+	return active_modules_list
+	
+def is_domain(module):
+	return module.get("category") == "Domains"
+
+def is_module(module):
+	return module.get("type") == "module"
+	
+def in_domains(module,active_domains):
+	domain = frappe.db.get_value('Module Def', module.get("module_name"), 'restrict_to_domain')
+	if domain and domain not in active_domains:
+		return False
+	return True
+	
+	
+@frappe.whitelist()
+def update_hidden_modules(category_map):
+	category_map = frappe.parse_json(category_map)
+	
+	from frappe.desk.moduleview import get_home_settings
+
+	home_settings = get_home_settings()
+
+	saved_hidden_modules = []
+	
+	for category in category_map:
+		config = frappe._dict(category_map[category])
+		# saved_hidden_modules += config.removed or []
+		saved_hidden_modules += config.removed or []
+		# saved_hidden_modules = [d for d in saved_hidden_modules if d not in (config.added or [])]
+
+		# if home_settings.get('modules_by_category') and home_settings.modules_by_category.get(category):
+			# module_placement = [d for d in (config.added or []) if d not in home_settings.modules_by_category[category]]
+			# home_settings.modules_by_category[category] += module_placement
+
+	home_settings.hidden_modules = saved_hidden_modules
+	set_home_settings(home_settings)
+	clear_desktop_icons_cache()
+	return get_desktop_settings()
+
+def set_home_settings(home_settings):
+	frappe.cache().hset('home_settings', frappe.session.user, home_settings)
+	frappe.db.set_value('User', frappe.session.user, 'home_settings', json.dumps(home_settings))

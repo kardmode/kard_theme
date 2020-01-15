@@ -6,13 +6,16 @@ from frappe.utils import cint
 from kard_theme.kard_theme.doctype.kard_theme_settings.kard_theme_settings import get_theme_info, get_theme_settings
 
 def boot_session(bootinfo):
-
+	if frappe.session.user=="Guest":
+		return
 	settings = get_theme_settings()
 	
 	if settings.use_custom_home_page == True:
 		add_home_page(bootinfo)
-	# if frappe.session['user']!='Guest':
-		# bootinfo.kard_user_icons,bootinfo.kard_settings,bootinfo.kard_standard_icons = get_theme_info()
+	
+	# bootinfo.kard_user_icons,bootinfo.kard_settings,bootinfo.kard_standard_icons = get_theme_info()	
+		
+	bootinfo.kard_settings = settings
 		
 def add_home_page(bootinfo):
 	"""load home page"""

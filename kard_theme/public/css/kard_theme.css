@@ -202,8 +202,8 @@ body[data-sidebar="0"] .toggle-sidebar {
 		display: none !important;
 	}
 
-@media (max-width: 991px) {
-  .layout-side-section .overlay-sidebar {
+
+.overlay-sidebar {
     margin-top: 0 !important;
     position: fixed;
     background: white;
@@ -213,43 +213,23 @@ body[data-sidebar="0"] .toggle-sidebar {
     z-index: 9999;
     box-shadow: 5px 0 25px 0px rgba(0, 0, 0, 0.3);
     height: 100% !important;
-    /* min-width: 40%; */
+    min-width: min(350px, 50%);
     max-width: 60%;
 	/* padding: 20px !important; */
     display: block !important;
 	transition: transform 170ms;
   }
-  .layout-side-section .overlay-sidebar.opened {
+.overlay-sidebar.opened {
     transform: translateX(0);
     overflow-y: auto;
   }
-  .layout-side-section .overlay-sidebar .divider {
+.overlay-sidebar .divider {
     height: 1px;
     background-color: #d8dfe5;
     opacity: 0.7;
   }
-  .layout-side-section .overlay-sidebar li:not(.divider):not(.tagit-new):not(.module-sidebar-item) {
-    /* padding: 10px 15px; */
-  }
-  .layout-side-section .overlay-sidebar .modified-by,
-  .layout-side-section .overlay-sidebar .created-by {
-    margin: 0;
-  }
-  .layout-side-section .overlay-sidebar .badge {
-    /* top: 9px;
-    right: 15px; */
-  }
-  .layout-side-section .overlay-sidebar .reports-dropdown {
-    /* margin-top: 10px; */
-    /* margin-bottom: -10px; */
-  }
-  .layout-side-section .overlay-sidebar .reports-dropdown li:not(.divider) {
-    /* padding: 12.5px 0 !important; */
-  }
-  .layout-side-section .overlay-sidebar .reports-dropdown li.divider {
-    height: 0;
-  }
-}
+
+
 
 #close-sidebar {
     position: fixed;
@@ -450,8 +430,31 @@ a.link-content:hover {
 	padding:8px 2px;
 }
 
-.page-title .title-image {
-    background: #eee !important;
+.show-hide-button
+{
+	text-align:right;
 }
 
 
+
+li.kt-module-header {
+    padding: 10px;
+    font-size: 22px;
+    font-weight: 600;
+	border-bottom:1px solid;
+}
+
+li.kt-module-section {
+    font-size: 18px;
+    padding: 10px;
+	font-weight:500;
+}
+
+.kt-module-link a {
+    padding: 10px;
+    font-size: 16px;
+}
+
+.kt-module-link a:hover {
+   background-color:#ddd !important;
+}

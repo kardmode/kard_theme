@@ -60,8 +60,7 @@
   {
    "fieldname": "app",
    "fieldtype": "Data",
-   "label": "App",
-   "reqd": 1
+   "label": "App"
   },
   {
    "fieldname": "description",
@@ -148,7 +147,7 @@
    "label": "reverse"
   }
  ],
- "modified": "2020-01-05 21:45:37.093872",
+ "modified": "2020-01-08 00:59:03.003472",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Kard Desktop Icon",
