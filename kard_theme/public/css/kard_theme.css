@@ -156,7 +156,7 @@ div#desktop-sidebar
 	padding-top:25px;
 }
 
-ul.module-sidebar-nav.overlay-sidebar.nav.nav-pills.nav-stacked {
+ul.module-sidebar-nav.kt-overlay-sidebar.nav.nav-pills.nav-stacked {
     position: fixed;
     overflow-y: scroll;
 }
@@ -203,7 +203,7 @@ body[data-sidebar="0"] .toggle-sidebar {
 	}
 
 
-.overlay-sidebar {
+.kt-overlay-sidebar {
     margin-top: 0 !important;
     position: fixed;
     background: white;
@@ -219,11 +219,11 @@ body[data-sidebar="0"] .toggle-sidebar {
     display: block !important;
 	transition: transform 170ms;
   }
-.overlay-sidebar.opened {
+.kt-overlay-sidebar.opened {
     transform: translateX(0);
     overflow-y: auto;
   }
-.overlay-sidebar .divider {
+.kt-overlay-sidebar .divider {
     height: 1px;
     background-color: #d8dfe5;
     opacity: 0.7;

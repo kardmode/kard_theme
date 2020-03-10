@@ -1,5 +1,7 @@
 frappe.provide('frappe.desktop');
 
+
+
 $(window).on('hashchange', function() {
 	let route_str = frappe.get_route_str();
 	let route = route_str.split('/');
@@ -16,6 +18,10 @@ $(window).on('hashchange', function() {
 							// setup_rightbar(section.items,section.icon,section.label);
 						// });
 	}
+	
+	frappe.add_to_desktop_link();
+
+	
 });
  
 $(document).ready(function() {
@@ -34,28 +40,32 @@ $(document).ready(function() {
 							// setup_rightbar(section.items,section.icon,section.label);
 						// });
 	}
+	
+	frappe.add_to_desktop_link();
+
+	
 });
 
-
+/* $(window).on('load', function(){	
+	
+}); */
 
 $(document).ajaxComplete(function() {
 	var ajax_state = $('body').attr('data-ajax-state');
 	
 	if(ajax_state === "complete")
 	{
-		var toolbar = document.getElementById('toolbar-user');		
-		if(toolbar)
-		{
-			frappe.add_to_desktop_link(toolbar);
-		}
+				frappe.add_to_desktop_link();
+
+		// if(navigationType() === 1)
+		// {
+		
+			// console.log(frappe.views.list_view[frappe.get_route_str()].view_user_settings.filters);
+		// }
+
 	}
-	let route_str = frappe.get_route_str();
-	let route = route_str.split('/');
-	if(!route_str)
-	{
-		// frappe.desktop.load_shortcuts();		
-	}
-	
+
+
 
 });
  
@@ -114,15 +124,14 @@ $.extend(frappe.desktop, {
 		
 		var settings = frappe.boot.kard_settings;
 		
-		var showhidebutton = document.createElement('div');
+		/* var showhidebutton = document.createElement('div');
 		$(showhidebutton).addClass("show-hide-button");
-		showhidebutton.innerHTML = '<a class="btn-show-hide-icons btn-show-hide-icons btn btn-primary btn-sm primary-action">Customize Desktop</a>';
+		showhidebutton.innerHTML = '<a class="btn-show-hide-icons btn-show-hide-icons btn btn-primary btn-sm primary-action"><i class="fa fa-pencil"></i></a>';
 		$(showhidebutton).on("click", ".btn-show-hide-icons", function() {
-			frappe.show_hide_cards_dialog();
+			
 		});
 		
-		
-		new_container_div.appendChild(showhidebutton);	
+		new_container_div.appendChild(showhidebutton);	 */
 		
 		if(settings.enable_bookmarks)
 		{
@@ -152,8 +161,8 @@ $.extend(frappe.desktop, {
 		
 						
 			var overlay_sidebar = document.createElement('div');
-			overlay_sidebar.setAttribute("id", "overlay-sidebar");
-			overlay_sidebar.setAttribute("class", "hide layout-side-section layout-left overlay-sidebar");
+			overlay_sidebar.setAttribute("id", "kt-overlay-sidebar");
+			overlay_sidebar.setAttribute("class", "hide layout-side-section layout-left kt-overlay-sidebar");
 			
 			var close_sidebar_wrapper = document.createElement('div');
 			close_sidebar_wrapper.setAttribute("id", "close-sidebar");
@@ -232,7 +241,7 @@ $.extend(frappe.desktop, {
 	setup_sidebar: function(sidebar) {
 		$(sidebar).on("click", function() {
 			var layout_side_section = $('.layout-side-section');
-			var overlay_sidebar = layout_side_section.find('.overlay-sidebar');
+			var overlay_sidebar = layout_side_section.find('.kt-overlay-sidebar');
 
 			overlay_sidebar.addClass('opened');
 			
@@ -330,7 +339,7 @@ $.extend(frappe.desktop, {
 		sidebar_div.setAttribute("id", "desktop-sidebar");
 		$(sidebar_div).addClass("col-md-3 layout-side-section layout-left");
 		let ul_wrapper = document.createElement('ul');
-		$(ul_wrapper).addClass("module-sidebar-nav overlay-sidebar nav nav-pills nav-stacked");
+		$(ul_wrapper).addClass("module-sidebar-nav kt-overlay-sidebar nav nav-pills nav-stacked");
 		
 		
 		for(key in frappe.desktop.modules){
@@ -731,7 +740,7 @@ $.extend(frappe.desktop, {
 		
 		var module = frappe.get_module(parent.attr("data-name"));
 
-		var overlay_sidebar = document.getElementById("overlay-sidebar");
+		var overlay_sidebar = document.getElementById("kt-overlay-sidebar");
 		if(overlay_sidebar)
 		{
 			overlay_sidebar.innerHTML = "";
@@ -1040,90 +1049,95 @@ frappe.add_to_desktop = function(label, doctype, report) {
 	});
 };
 
-frappe.add_to_desktop_link = function(toolbar) {
+frappe.add_to_desktop_link = function() {
 	let route_str = frappe.get_route_str();
 	let route = route_str.split('/');
 	var type = '';
+	var doctype = '';
 	var label = '';
 	var report = '';
-
-	if(toolbar)
-	{
-		let new_link = document.getElementById('add-to-desktop');
-		if(new_link)
-		{
-			$(new_link).addClass("hide");
-		}
-		else
-		{
-			new_link = document.createElement('li');
-			new_link.setAttribute('id','add-to-desktop');
-			$(new_link).addClass("hide");
-			
-			
-		
-			$('<a>'+__("Add To Desktop")+'</a>').appendTo(new_link);
-			
-			toolbar.prepend(new_link);
-		}
-		
-		
-		
-		
-		if (route[0] === 'List') {
-			type = route[0];
-			label = route[1];
-			
-			$(new_link).removeClass("hide");
-		}
-		else if (route[0] === 'Form') {
-			type = route[0];
-			label = route[1];
-			
-			if(frappe.model.is_single(label)) {
-				$(new_link).removeClass("hide");
-			} 
-			
-			
-		}
-		else if (route[2] === 'Report') {
-			type = route[2];
-			// label = route[1];
-			report = route[1];
-			$(new_link).removeClass("hide");
-		}
-		else if (route[0] === 'query-report') {
-			type = route[0];
-			// label = route[1];
-			report = route[1];
-			$(new_link).removeClass("hide");
-		}
-		// else if (route[0] === 'modules') {
-			// type = route[0];
-			// label = route[1];
-		// }
-		// else if (route[0] === 'dashboard') {
-			// add_to_desktop_link(route[0],route[1]);
-		// }
-		else
-		{
 	
-		}
+	var toolbar = document.getElementById('toolbar-user');		
+
+	if(!toolbar)
+		return;
+	
+	let new_link = document.getElementById('add-to-desktop');
+	if(!new_link)
+	{
+		new_link = document.createElement('li');
+		new_link.setAttribute('id','add-to-desktop');
+		$(new_link).addClass("hide");
+		toolbar.prepend(new_link);
+	}
+	
+	$(new_link).addClass("hide");
+
+	
+	if(!route_str) {
 		
-		
-		var msg = 'Add '+label+' To Desktop?';
+		new_link.innerHTML = '<a>'+__("Customize Desktop")+'</a>';
 		$(new_link).unbind();
 		$(new_link).on("click", function() {
-						
-			frappe.confirm(__(msg), 
-				function() {
-					frappe.add_to_desktop(label,label,report);
-				}
-			)
+					
+			frappe.show_hide_cards_dialog();
 		});
-		
+		$(new_link).removeClass("hide");
+	
+		return;
 	}
-		
+	else if (route[0] === 'List') {
+		type = route[0];
+		label = route[1];
+		doctype = route[1];
+	}
+	else if (route[0] === 'Form') {
+		type = route[0];
+		label = route[1];
+		doctype = route[1];
+		if(!frappe.model.is_single(label)) {
+			return;
+		} 
+	}
+	else if (route[2] === 'Report') {
+		type = route[2];
+		label = route[1];
+		report = route[1];
+	}
+	else if (route[0] === 'query-report') {
+		type = route[0];
+		label = route[1];
+		report = route[1];
+	}
+	// else if (route[0] === 'modules') {
+		// type = route[0];
+		// label = route[1];
+	// }
+	// else if (route[0] === 'dashboard') {
+		// type = route[0];
+		// label = route[1];
+		// $(new_link).removeClass("hide");
+	// }
+	else
+	{
+		return;
+	}
+	
+	$(new_link).removeClass("hide");
+	new_link.innerHTML = '<a>'+__("Add To Desktop")+'</a>';
+
+	
+	var msg = 'Add '+label+' To Desktop?';
+	$(new_link).unbind();
+	$(new_link).on("click", function() {
+					
+		frappe.confirm(__(msg), 
+			function() {
+				frappe.add_to_desktop(label,doctype,report);
+			}
+		)
+	});
+				
 };
 
 frappe.setup_module_rightbar = function(items,icon,title) {
@@ -1409,4 +1423,26 @@ frappe.update_user_modules = function(d, old_values) {
 		window.location.reload();
 	});
 };
+
+
+function navigationType(){
+
+    var result;
+    var p;
+
+    if (window.performance.navigation) {
+        result=window.performance.navigation;
+        if (result==255){result=4} // 4 is my invention!
+    }
+
+    if (window.performance.getEntriesByType("navigation")){
+       p=window.performance.getEntriesByType("navigation")[0].type;
+
+       if (p=='navigate'){result=0}
+       if (p=='reload'){result=1}
+       if (p=='back_forward'){result=2}
+       if (p=='prerender'){result=3} //3 is my invention!
+    }
+    return result;
+}
 	
