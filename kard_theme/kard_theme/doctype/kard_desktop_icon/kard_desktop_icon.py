@@ -229,7 +229,7 @@ def add_user_icon(_doctype, _report=None, label=None, link=None, type='link', st
 			opts = random.choice(palette)
 			module_icon.color = opts[0]
 			module_icon.reverse = 0 if (len(opts) > 1) else 1
-
+			module_icon.icon = "octicon octicon-file-text"
 		try:
 			new_icon = frappe.get_doc({
 				'doctype': 'Kard Desktop Icon',
@@ -239,8 +239,8 @@ def add_user_icon(_doctype, _report=None, label=None, link=None, type='link', st
 				'type': type,
 				'_doctype': _doctype,
 				'_report': _report,
-				'icon': module_icon.icon or userdefined_icon.icon or "octicon octicon-file-text",
-				'color': module_icon.color or userdefined_icon.color or "#2ecc71" ,
+				'icon': module_icon.icon or userdefined_icon.icon,
+				'color': module_icon.color or userdefined_icon.color,
 				'reverse': module_icon.reverse,
 				'idx': idx + 1,
 				'custom': 1,
