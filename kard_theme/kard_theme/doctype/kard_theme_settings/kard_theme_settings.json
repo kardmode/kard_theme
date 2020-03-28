@@ -19,7 +19,9 @@
   "initialize_standard_icons",
   "clear_user_icons",
   "sync_standard_icons",
-  "copy_desktop_icons"
+  "copy_desktop_icons",
+  "module_view_section_section",
+  "enable_dynamic_module_view"
  ],
  "fields": [
   {
@@ -97,10 +99,21 @@
   {
    "fieldname": "section_break_2",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "module_view_section_section",
+   "fieldtype": "Section Break",
+   "label": "Module View Section"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_dynamic_module_view",
+   "fieldtype": "Check",
+   "label": "Enable Dynamic Module View"
   }
  ],
  "issingle": 1,
- "modified": "2020-01-13 22:47:27.657064",
+ "modified": "2020-03-28 22:09:25.471251",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Kard Theme Settings",

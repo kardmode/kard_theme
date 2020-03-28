@@ -1,10 +1,10 @@
 frappe.provide('frappe.desktop');
 
-
-
 $(window).on('hashchange', function() {
+
 	let route_str = frappe.get_route_str();
 	let route = route_str.split('/');
+	
 	if(!route_str)
 	{
 		frappe.desktop.load_shortcuts();	
@@ -46,32 +46,21 @@ $(document).ready(function() {
 	
 });
 
-/* $(window).on('load', function(){	
-	
-}); */
-
 $(document).ajaxComplete(function() {
 	var ajax_state = $('body').attr('data-ajax-state');
 	
 	if(ajax_state === "complete")
 	{
-				frappe.add_to_desktop_link();
-
-		// if(navigationType() === 1)
-		// {
-		
-			// console.log(frappe.views.list_view[frappe.get_route_str()].view_user_settings.filters);
-		// }
-
+		frappe.add_to_desktop_link();
 	}
-
-
 
 });
  
-$.extend(frappe.desktop, {
-	
-	load_shortcuts: function(wrapper) {
+$.extend(frappe.desktop, {	
+	load_shortcuts: function() {
+		
+		if(!frappe.boot.kard_settings.enable_theme)
+			return;
 		
 		var wrapper = document.getElementById('page-desktop');
 		if(wrapper){
@@ -80,18 +69,7 @@ $.extend(frappe.desktop, {
 		else
 		{
 			return;
-		}			
-		
-		if(!frappe.boot.kard_settings.enable_theme)
-			return;
-		
-		
-		
-		
-		
-		
-		
-		
+		}					
 		
 		var check_wrapper = document.getElementById('layout-main-section');
 		if (!check_wrapper)
@@ -1050,6 +1028,7 @@ frappe.add_to_desktop = function(label, doctype, report) {
 };
 
 frappe.add_to_desktop_link = function() {
+	
 	let route_str = frappe.get_route_str();
 	let route = route_str.split('/');
 	var type = '';
@@ -1072,6 +1051,11 @@ frappe.add_to_desktop_link = function() {
 	}
 	
 	$(new_link).addClass("hide");
+	
+	
+	if(!frappe.boot.kard_settings.enable_theme)
+		return;
+
 
 	
 	if(!route_str) {
@@ -1223,11 +1207,11 @@ frappe.show_hide_cards_dialog = function() {
 				{
 					label: __('User ({0})', [frappe.session.user]),
 					value: user_value
-				},
+				}/* ,
 				{
 					label: __('Everyone'),
 					value: 'Everyone'
-				}
+				} */
 			],
 			default: user_value,
 			depends_on: doc => frappe.user_roles.includes('System Manager'),

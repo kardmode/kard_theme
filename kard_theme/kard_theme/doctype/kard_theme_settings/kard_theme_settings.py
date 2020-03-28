@@ -83,12 +83,10 @@ class KardThemeSettings(Document):
 	
 @frappe.whitelist()
 def get_theme_info():
-
 	settings = get_theme_settings()
 	all_icons = get_desktop_icons(enable_links_by_module = settings.enable_links_by_module)
 	user_icons = all_icons.get("user_icons")
 	standard_icons = all_icons.get("standard_icons")
-	
 	return settings,user_icons,standard_icons
 	
 @frappe.whitelist()
@@ -98,6 +96,20 @@ def get_theme_settings():
 	
 @frappe.whitelist()
 def get(module):
+	
+	try:
+		boot = frappe.sessions.get()
+	except Exception as e:
+		boot = frappe._dict(status='failed', error = str(e))
+		print(frappe.get_traceback())
+
+	if not boot.kard_settings.enable_dynamic_module_view:
+		from frappe.desk.moduleview import get as _get
+		return _get(module)
+			
+
+
+
 	"""Returns data (sections, list of reports, counts) to render module view in desk:
 	`/desk/#Module/[name]`."""
 	data = get_data(module)
@@ -204,6 +216,10 @@ def add_custom_doctypes(data, doctype_info,module):
 def get_doctype_info(module):
 	"""Returns list of non child DocTypes for given module."""
 	active_domains = frappe.get_active_domains()
+	
+	
+	doctype_fields = ["'doctype' as type", "name", "description", "document_type",
+		"custom", "issingle","beta","icon","name as label"]
 
 	doctype_info = frappe.get_all("DocType", filters={
 		"module": module,
@@ -211,22 +227,23 @@ def get_doctype_info(module):
 	}, or_filters={
 		"ifnull(restrict_to_domain, '')": "",
 		"restrict_to_domain": ("in", active_domains)
-	}, fields=["'doctype' as type", "name", "description", "document_type",
-		"custom", "issingle","beta","icon","custom_label as label"], order_by="custom asc, document_type desc, name asc")
+	}, fields=doctype_fields, order_by="custom asc, document_type desc, name asc")
 		
+	page_fields = ["'page' as type", "name","title as label", "description", "document_type",
+		"custom","beta","icon"]
 		
 	doctype_info += frappe.get_all("Page", filters={
 		"module": module
 	}, or_filters={
 		"ifnull(restrict_to_domain, '')": "",
 		"restrict_to_domain": ("in", active_domains)
-	}, fields=["'page' as type", "name","title as label", "description", "document_type",
-		"custom","beta","icon"], order_by="custom asc, document_type desc, name asc")
+	}, fields=page_fields, order_by="custom asc, document_type desc, name asc")
 
 
 	for d in doctype_info:
 		d.document_type = d.document_type or ""
 		d.description = _(d.description or "")
+		d.label = d.label or d.name
 		d["icon"] = ""
 	return doctype_info
 
@@ -309,6 +326,16 @@ def get_custom_report_list(module):
 
 @frappe.whitelist()
 def get_desktop_settings():
+	try:
+		boot = frappe.sessions.get()
+	except Exception as e:
+		boot = frappe._dict(status='failed', error = str(e))
+		print(frappe.get_traceback())
+
+	if not boot.kard_settings.enable_dynamic_module_view:
+		from frappe.desk.moduleview import get_desktop_settings as _get_desktop_settings
+		return _get_desktop_settings()
+
 	from frappe.desk.moduleview import get_home_settings
 
 	all_modules = get_modules_from_all_apps_for_user()

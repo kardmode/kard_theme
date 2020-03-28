@@ -120,6 +120,6 @@ boot_session = "kard_theme.kard_theme.utils.boot_session"
 override_whitelisted_methods = {
 	"frappe.desk.moduleview.get": "kard_theme.kard_theme.doctype.kard_theme_settings.kard_theme_settings.get",
 	"frappe.desk.moduleview.get_desktop_settings": "kard_theme.kard_theme.doctype.kard_theme_settings.kard_theme_settings.get_desktop_settings",
-	# "frappe.config.get_modules_from_app": "kard_theme.kard_theme.doctype.kard_theme_settings.kard_theme_settings.get_modules_from_app"
 }
+		
 
