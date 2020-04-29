@@ -133,6 +133,9 @@ def get_desktop_icons(user=None, enable_links_by_module = False):
 						icon.hidden = 1
 						icon.hidden_in_standard = 1
 					icon["items"] = module_items
+					
+			if icon.get('category') == '' or icon.get('category') == None:
+				icon.category = "Uncategorized"
 				
 	
 		standard_icons = [m for m in user_icons if m.get('standard') == 1]
@@ -164,6 +167,8 @@ def get_desktop_icons(user=None, enable_links_by_module = False):
 		for category in module_categories:
 			user_modules_by_category[category] = [m for m in standard_icons if m.get('category') == category]
 		
+		user_modules_by_category["Uncategorized"] = [m for m in standard_icons if m.get('category') == 'Uncategorized']
+
 		
 		from frappe.desk.moduleview import get_home_settings
 

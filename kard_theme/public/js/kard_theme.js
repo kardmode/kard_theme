@@ -128,6 +128,8 @@ $.extend(frappe.desktop, {
 
 				let m = frappe.desktop.modules[key];
 				
+				console.log(m)
+				
 				let newNode = frappe.desktop.render_module_desktop_icons(m,key);
 				new_container_div.appendChild(newNode);
 				frappe.desktop.setup_module_click($(newNode));
