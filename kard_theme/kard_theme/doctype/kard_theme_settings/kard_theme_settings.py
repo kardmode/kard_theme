@@ -27,8 +27,9 @@ class KardThemeSettings(Document):
 			frappe.delete_doc('Kard Desktop Icon', icon.name, ignore_missing=True)
 
 		
-	def initialize_standard_icons(self):	
-			
+	def initialize_standard_icons(self,default_category=""):	
+		frappe.db.sql('delete from `tabKard Desktop Icon` where standard=1')
+		
 		modules_list = frappe.db.get_all('Module Def',
 			fields=['name','app_name'], filters={})
 			
@@ -43,6 +44,7 @@ class KardThemeSettings(Document):
 				'color': 'grey',
 				'icon': 'octicon octicon-file-directory',
 				'idx': i,
+				'category':default_category
 			}).insert()
 			
 	def sync_standard_icons(self):
@@ -62,21 +64,18 @@ class KardThemeSettings(Document):
 			if m.name not in module_names:
 				frappe.db.sql('delete from `tabKard Desktop Icon` where module_name=%s',m.name)
 				
-	def copy_from_desktop_icons(self):
-		
-		fields = ['name','module_name', 'app','hidden', 'label', 'link', 'type', 'icon', 'color', 'description', 'category',
-			'_doctype', '_report', 'idx', 'force_show', 'reverse', 'custom', 'standard', 'blocked']
-
-		
-		kard_desktop_icons = frappe.db.get_all('Kard Desktop Icon', fields={}, filters={})
-		for icon in kard_desktop_icons:
-			frappe.delete_doc('Kard Desktop Icon', icon.name, ignore_missing=True)
+	def copy_from_desktop_icons(self,default_category=""):
+		frappe.db.sql('delete from `tabKard Desktop Icon`')
 		
 		desktop_icons = frappe.db.sql("""SELECT * FROM `tabDesktop Icon`""", as_dict=1)
 		for m in desktop_icons:
 			# new_doc = {}
 			# for key in desktop_icons:
 				# new_doc[key] = m.key
+			if m['category']:
+				if not frappe.db.get_value("Kard Desktop Category", m['category']):
+					m['category'] = default_category
+					
 			m['doctype'] = 'Kard Desktop Icon'
 			frappe.get_doc(m).insert()
 		
@@ -229,15 +228,24 @@ def get_doctype_info(module):
 		"restrict_to_domain": ("in", active_domains)
 	}, fields=doctype_fields, order_by="custom asc, document_type desc, name asc")
 		
-	page_fields = ["'page' as type", "name","title as label", "description", "document_type",
-		"custom","beta","icon"]
+	page_fields = ["'page' as type", "name","title as label","icon"]
+	page_meta = frappe.get_meta("Page")	
+	if page_meta.has_field('description'):
+		page_fields += ["description"]
+	if page_meta.has_field('document_type'):
+		page_fields += ["document_type"]
+	if page_meta.has_field('custom'):
+		page_fields += ["custom"]
+	if page_meta.has_field('beta'):
+		page_fields += ["beta"]
+	
 		
 	doctype_info += frappe.get_all("Page", filters={
 		"module": module
 	}, or_filters={
 		"ifnull(restrict_to_domain, '')": "",
 		"restrict_to_domain": ("in", active_domains)
-	}, fields=page_fields, order_by="custom asc, document_type desc, name asc")
+	}, fields=page_fields)
 
 
 	for d in doctype_info:
@@ -303,9 +311,16 @@ def get_custom_links(data,module):
 	
 def get_custom_report_list(module):
 	"""Returns list on new style reports for modules."""
-	reports =  frappe.get_list("Report", fields=["name", "ref_doctype", "report_type","favorite"], filters=
+	report_fields = ["name", "ref_doctype", "report_type"]
+	report_meta = frappe.get_meta("Report")
+	order_by = "name"
+	
+	if report_meta.has_field('favorite'):
+		report_fields += ["favorite"]
+		order_by = "favorite desc, name"
+	reports =  frappe.get_list("Report", fields=report_fields, filters=
 		{"disabled": 0, "module": module},
-		order_by="favorite desc, name")
+		order_by=order_by)
 		
 	out = []
 	for r in reports:
@@ -315,8 +330,8 @@ def get_custom_report_list(module):
 			"is_query_report": 1 if r.report_type in ("Query Report", "Script Report", "Custom Report") else 0,
 			"label": _(r.name),
 			"name": r.name,
-			"icon": "fa fa-star" if r.favorite == 1 else "",
-			"favorite":r.favorite
+			"icon": "fa fa-star" if ("favorite" in r and r.favorite == 1) else "",
+			"favorite": 1 if "favorite" in r and r.favorite == 1 else 0
 		})
 
 	return out

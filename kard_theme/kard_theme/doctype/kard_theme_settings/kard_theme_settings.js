@@ -11,17 +11,29 @@ frappe.ui.form.on('Kard Theme Settings', {
 			frappe.route_options = {
 				standard: 1
 			}			
-			frappe.set_route("List", "Desktop Icon");
+			frappe.set_route("List", "Kard Desktop Icon");
 		});
 
 	},
 	
 	initialize_standard_icons: function(frm) {
-		frappe.confirm(__('This will reset and initialize standard icons from module definitions. Do you want to proceed?'),
-			function() {
+		var dialog = new frappe.ui.Dialog({
+				title: "This will reset and initialize standard icons from module definitions.",
+				fields: [
+					{	
+						"fieldtype": "Link", 
+						"label": __("Default Category"), 
+						"fieldname": "default_category",
+						"options":'Kard Desktop Category'
+					}
+				]
+			});
+			
+			dialog.set_primary_action(__('Confirm'), args => {
+		
 				frappe.call({
 					method: 'initialize_standard_icons',
-					args: {},
+					args: {'default_category':args.default_category},
 					callback: function(r) {
 					
 					
@@ -32,20 +44,18 @@ frappe.ui.form.on('Kard Theme Settings', {
 							
 							
 						}
+						dialog.hide();
+						
+					
 						
 					},
 					doc: frm.doc,
 					freeze: true,
 					freeze_message: 'Initializing Standard Icons...'
 				});
-			},
-			function() {
-				if(frappe.dom.freeze_count) {
-					frappe.dom.unfreeze();
-					frm.events.refresh(frm);
-				}
-			}
-		);
+			});
+			
+			dialog.show();
 	},
 	clear_user_icons: function(frm) {
 		frappe.confirm(__('This will clear all user desktop icons. Do you want to proceed?'),
@@ -110,11 +120,23 @@ frappe.ui.form.on('Kard Theme Settings', {
 		);
 	},
 	copy_desktop_icons: function(frm) {
-		frappe.confirm(__('This will clear all kard desktop icons and copy from old desktop icons. Do you want to proceed?'),
-			function() {
+		var dialog = new frappe.ui.Dialog({
+				title: "This will clear all kard desktop icons and copy from old desktop icons.",
+				fields: [
+					{	
+						"fieldtype": "Link", 
+						"label": __("Default Category"), 
+						"fieldname": "default_category",
+						"options":'Kard Desktop Category'
+					}
+				]
+			});
+			
+			dialog.set_primary_action(__('Confirm'), args => {
+		
 				frappe.call({
 					method: 'copy_from_desktop_icons',
-					args: {},
+					args: {'default_category':args.default_category},
 					callback: function(r) {
 					
 					
@@ -125,19 +147,17 @@ frappe.ui.form.on('Kard Theme Settings', {
 							
 							
 						}
+						dialog.hide();
+						
+					
 						
 					},
 					doc: frm.doc,
 					freeze: true,
-					freeze_message: 'Copying Desktop Icons...'
+					freeze_message: 'Initializing Standard Icons...'
 				});
-			},
-			function() {
-				if(frappe.dom.freeze_count) {
-					frappe.dom.unfreeze();
-					frm.events.refresh(frm);
-				}
-			}
-		);
+			});
+			
+			dialog.show();
 	},
 });

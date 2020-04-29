@@ -251,11 +251,6 @@ div#close-sidebar.opened{
 }
 
 
-  
-.modules-container {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
-}
-
 .module-box-link i {
     display: block;
     margin-bottom:5px;
