@@ -82,7 +82,7 @@ $.extend(frappe.desktop, {
 					frappe.desktop.render();
 				},
 				freeze: true,
-				freeze_message: "Processing"
+				freeze_message: "Loading"
 				
 			});
 			
@@ -127,9 +127,7 @@ $.extend(frappe.desktop, {
 			for(key in frappe.desktop.modules){
 
 				let m = frappe.desktop.modules[key];
-				
-				console.log(m)
-				
+								
 				let newNode = frappe.desktop.render_module_desktop_icons(m,key);
 				new_container_div.appendChild(newNode);
 				frappe.desktop.setup_module_click($(newNode));
@@ -1053,17 +1051,19 @@ frappe.add_to_desktop_link = function() {
 	}
 	
 	$(new_link).addClass("hide");
-	
+	$(new_link).unbind();
+
 	
 	if(!frappe.boot.kard_settings.enable_theme)
 		return;
 
+	if(!frappe.boot.kard_settings.enable_bookmarks)
+		return;
 
 	
 	if(!route_str) {
 		
 		new_link.innerHTML = '<a>'+__("Customize Desktop")+'</a>';
-		$(new_link).unbind();
 		$(new_link).on("click", function() {
 					
 			frappe.show_hide_cards_dialog();
@@ -1109,12 +1109,14 @@ frappe.add_to_desktop_link = function() {
 		return;
 	}
 	
+	if(!frappe.boot.kard_settings.enable_bookmarks)
+		return;
+	
 	$(new_link).removeClass("hide");
 	new_link.innerHTML = '<a>'+__("Add To Desktop")+'</a>';
 
 	
 	var msg = 'Add '+label+' To Desktop?';
-	$(new_link).unbind();
 	$(new_link).on("click", function() {
 					
 		frappe.confirm(__(msg), 

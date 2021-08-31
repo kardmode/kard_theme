@@ -7,10 +7,11 @@ from six import iteritems
 import frappe
 import json
 from frappe import _
-from frappe.desk.moduleview import combine_common_sections,apply_permissions
+from frappe.desk.moduleview import combine_common_sections,apply_permissions,get_table_with_counts
 from kard_theme.kard_theme.doctype.kard_desktop_icon.kard_desktop_icon import get_desktop_icons,clear_desktop_icons_cache
 from frappe.desk.moduleview import (get_onboard_items)
 from frappe.model.document import Document
+from frappe.cache_manager import build_domain_restriced_doctype_cache, build_domain_restriced_page_cache, build_table_count_cache
 
 class KardThemeSettings(Document):
 	def clear_user_icons(self):
@@ -140,41 +141,41 @@ def get_data(module, build=True):
 	
 	# set_last_modified(data)
 
-	# if build:
-		# exists_cache = {}
-		# def doctype_contains_a_record(name):
-			# exists = exists_cache.get(name)
-			# if not exists:
-				# if not frappe.db.get_value('DocType', name, 'issingle'):
-					# exists = frappe.db.count(name)
-				# else:
-					# exists = True
-				# exists_cache[name] = exists
-			# return exists
+	if build:
+		exists_cache = get_table_with_counts()
+		def doctype_contains_a_record(name):
+			exists = exists_cache.get(name)
+			if not exists:
+				if not frappe.db.get_value('DocType', name, 'issingle'):
+					exists = frappe.db.count(name)
+				else:
+					exists = True
+				exists_cache[name] = exists
+			return exists
 
-		# for section in data:
-			# for item in section["items"]:
-				# # Onboarding
+		for section in data:
+			for item in section["items"]:
+				# Onboarding
 
-				# # First disable based on exists of depends_on list
-				# doctype = item.get("doctype")
-				# dependencies = item.get("dependencies") or None
-				# if not dependencies and doctype:
-					# item["dependencies"] = [doctype]
+				# First disable based on exists of depends_on list
+				doctype = item.get("doctype")
+				dependencies = item.get("dependencies") or None
+				if not dependencies and doctype:
+					item["dependencies"] = [doctype]
 
-				# dependencies = item.get("dependencies")
-				# if dependencies:
-					# incomplete_dependencies = [d for d in dependencies if not doctype_contains_a_record(d)]
-					# if len(incomplete_dependencies):
-						# item["incomplete_dependencies"] = incomplete_dependencies
+				dependencies = item.get("dependencies")
+				if dependencies:
+					incomplete_dependencies = [d for d in dependencies if not doctype_contains_a_record(d)]
+					if len(incomplete_dependencies):
+						item["incomplete_dependencies"] = incomplete_dependencies
 
-				# if item.get("onboard"):
-					# # Mark Spotlights for initial
-					# if item.get("type") == "doctype":
-						# name = item.get("name")
-						# count = doctype_contains_a_record(name)
+				if item.get("onboard"):
+					# Mark Spotlights for initial
+					if item.get("type") == "doctype":
+						name = item.get("name")
+						count = doctype_contains_a_record(name)
 
-						# item["count"] = count
+						item["count"] = count
 
 	return data
 	

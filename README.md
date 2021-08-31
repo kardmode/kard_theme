@@ -36,6 +36,7 @@ bench install-app kard_theme [your_site_name]
 ## Initial Setup
 
 The Kard Desktop Icon table needs standard module information. Kard Theme Settings can initialzie the list with module information.
+
 Kard Desktop Category determines which category the module shows under otherwise icons will be shown under an Uncategorized Section.
 
 <img src="Screenshot.png"/>
