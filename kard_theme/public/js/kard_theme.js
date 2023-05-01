@@ -2,6 +2,8 @@ frappe.provide('frappe.desktop');
 
 $(window).on('hashchange', function() {
 
+	if(!frappe.boot.kard_settings.enable_theme)
+		return;
 	let route_str = frappe.get_route_str();
 	let route = route_str.split('/');
 	
@@ -25,6 +27,10 @@ $(window).on('hashchange', function() {
 });
  
 $(document).ready(function() {
+	
+	if(!frappe.boot.kard_settings.enable_theme)
+		return;
+	
 	let route_str = frappe.get_route_str();
 	let route = route_str.split('/');
 	if(!route_str)
@@ -47,6 +53,9 @@ $(document).ready(function() {
 });
 
 $(document).ajaxComplete(function() {
+	if(!frappe.boot.kard_settings.enable_theme)
+			return;
+	
 	var ajax_state = $('body').attr('data-ajax-state');
 	
 	if(ajax_state === "complete")
