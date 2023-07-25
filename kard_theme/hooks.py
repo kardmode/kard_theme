@@ -16,7 +16,7 @@ app_license = "MIT"
 
 # include js, css files in header of desk.html
 app_include_css = "/assets/kard_theme/css/kard_theme.css"
-app_include_js = "/assets/kard_theme/js/kard_theme.js"
+# app_include_js = "/assets/kard_theme/js/kard_theme.js"
 
 boot_session = "kard_theme.kard_theme.utils.boot_session"
 # include js, css files in header of web template
@@ -24,7 +24,7 @@ boot_session = "kard_theme.kard_theme.utils.boot_session"
 # web_include_js = "/assets/kard_theme/js/kard_theme.js"
 
 # include js in page
-# page_js = {"desktop" : "public/js/kard_theme.js"}
+page_js = {"workspace" : "public/js/kard_theme.js"}
 
 # include js in doctype views
 # doctype_js = {"doctype" : "public/js/doctype.js"}

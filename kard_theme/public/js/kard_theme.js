@@ -1,7 +1,8 @@
 frappe.provide('frappe.desktop');
 
-$(window).on('hashchange', function() {
 
+$(window).on('hashchange', function() {
+	
 	if(!frappe.boot.kard_settings.enable_theme)
 		return;
 	let route_str = frappe.get_route_str();
@@ -9,7 +10,7 @@ $(window).on('hashchange', function() {
 	
 	if(!route_str)
 	{
-		frappe.desktop.load_shortcuts();	
+		frappe.desktop.refresh();	
 	}	
 	else if(route[0] == "modules")
 	{
@@ -35,16 +36,10 @@ $(document).ready(function() {
 	let route = route_str.split('/');
 	if(!route_str)
 	{
-		frappe.desktop.load_shortcuts();		
+		frappe.desktop.refresh();		
 	}
 	else if(route[0] == "modules")
 	{
-		// var page = frappe.ui.pages[route_str] 
-		// console.log(page);
-		// page.add_action_btn(section.icon,section.label, function(){
-							
-							// setup_rightbar(section.items,section.icon,section.label);
-						// });
 	}
 	
 	frappe.add_to_desktop_link();
@@ -52,11 +47,57 @@ $(document).ready(function() {
 	
 });
 
-$(document).ajaxComplete(function() {
-	if(!frappe.boot.kard_settings.enable_theme)
-			return;
+$(document).ajaxComplete(function() {	
 	
-	var ajax_state = $('body').attr('data-ajax-state');
+	if(!frappe.boot.kard_settings.enable_theme)
+		return;
+	setTimeout(() => {  
+		var ajax_state = $('body').attr('data-ajax-state');
+		if(ajax_state === "complete")
+		{
+			var labels = $(document).find('.custom-btn-group-label');			
+			var added_doctypes = false;
+			var added_reports = false;
+			
+			labels.each((i) => {
+				if(labels[i].innerText == 'DocTypes')
+					added_doctypes = true;
+				
+				if(labels[i].innerText == 'Reports')
+					added_reports = true;
+
+			});
+			
+			
+			var doctypes_menu;
+			var reports_menu;
+			if(added_doctypes === false)
+			{
+				let $workspace_page = frappe.pages['Workspaces']['page'];
+				doctypes_menu = $workspace_page.add_custom_button_group(__('DocTypes'));
+				$workspace_page.add_custom_menu_item(doctypes_menu, __("Test"), function() {
+					
+				});
+
+			}
+			
+			if(added_reports === false)
+			{
+				let $workspace_page = frappe.pages['Workspaces']['page'];
+				reports_menu = $workspace_page.add_custom_button_group(__('Reports'));
+			}
+			
+			
+		}
+	}, 
+	
+	2000);
+	
+	
+	
+	
+	
+	
 	
 	if(ajax_state === "complete")
 	{
@@ -65,7 +106,16 @@ $(document).ajaxComplete(function() {
 
 });
  
-$.extend(frappe.desktop, {	
+$.extend(frappe.desktop, {
+	refresh: function(wrapper) {
+		var me = this;
+		
+		if (wrapper) {
+			this.wrapper = $(wrapper);
+		}
+		
+		frappe.desktop.load_shortcuts(wrapper);
+	},
 	load_shortcuts: function() {
 		
 		if(!frappe.boot.kard_settings.enable_theme)
