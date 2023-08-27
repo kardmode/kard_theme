@@ -11,7 +11,7 @@ frappe.pages['kard-desktop'].on_page_show = function(wrapper) {
 $.extend(frappe.kard_desktop, {
 	refresh: function(wrapper) {
 		var me = this;
-		
+		console.log("kard_desktop refresh");
 		if (wrapper) {
 			this.wrapper = $(wrapper);
 		}

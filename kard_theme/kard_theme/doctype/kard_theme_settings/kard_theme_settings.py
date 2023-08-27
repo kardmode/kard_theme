@@ -95,7 +95,7 @@ def get_theme_settings():
 	return settings
 	
 @frappe.whitelist()
-def get(module):
+def get(module, build=True, is_workspace=0):
 	
 	try:
 		boot = frappe.sessions.get()
@@ -103,28 +103,13 @@ def get(module):
 		boot = frappe._dict(status='failed', error = str(e))
 		print(frappe.get_traceback())
 
-	if not boot.kard_settings.enable_dynamic_module_view:
-		from frappe.desk.moduleview import get as _get
-		return _get(module)
-			
+	data = []
+	if is_workspace == "1":
+		get_custom_links(data,module,is_workspace)
+	else:	
+		doctype_info = get_doctype_info(module)
+		data = build_standard_config(module, doctype_info)
 
-
-
-	"""Returns data (sections, list of reports, counts) to render module view in desk:
-	`/desk/#Module/[name]`."""
-	data = get_data(module)
-	out = {
-		"data": data
-	}
-
-	return out
-	
-def get_data(module, build=True):
-	"""Get module data for the module view `desk/#Module/[name]`"""
-	doctype_info = get_doctype_info(module)
-
-	data = build_standard_config(module, doctype_info)
-			
 	data = combine_common_sections(data)
 	data = apply_permissions(data)
 	
@@ -177,7 +162,11 @@ def get_data(module, build=True):
 
 						item["count"] = count
 
-	return data
+	out = {
+		"data": data
+	}
+
+	return out
 	
 def build_standard_config(module, doctype_info):
 	data = []
@@ -186,7 +175,7 @@ def build_standard_config(module, doctype_info):
 	if not frappe.db.get_value("Module Def", module):
 		return data
 
-	add_custom_doctypes(data, doctype_info,module)
+	add_custom_doctypes(data, doctype_info, module)
 
 	return data
 	
@@ -201,12 +190,17 @@ def add_section(data, label, icon, items,color="#7f8c8d",shown_in="module_view")
 		"shown_in":shown_in
 	})
 	
-def add_custom_doctypes(data, doctype_info,module):
+def add_custom_doctypes(data, doctype_info, module):
+
+
 	sections =  frappe.get_list("MRP Module Section", fields=["name", "icon", "shown_in"],order_by="name")
 	for link in sections:
 		if link.shown_in != "none":
 			add_section(data, _(link.name), link.icon,
 				[d for d in doctype_info if (d.document_type == link.name)],link.color,link.shown_in)
+
+	# add_section(data, _("Other"), "",
+				# [d for d in doctype_info if (d.document_type == "")],"#7f8c8d","module_view")
 
 	get_custom_links(data,module)
 
@@ -257,9 +251,15 @@ def get_doctype_info(module):
 	return doctype_info
 
 
-def get_custom_links(data,module):
-	custom_links =  frappe.get_list("Module View Link", fields=["label","section","type","icon", "_doctype","_module","_report","_page","link","use_section_set_in_doctype"], filters=
-		{"blocked": 0, "module_name": module})
+def get_custom_links(data,module,is_workspace=False):
+	custom_links = []
+	if is_workspace:
+		custom_links =  frappe.get_list("Module View Link", fields=["label","section","type","icon", "_doctype","_module","_report","_page","link","use_section_set_in_doctype"], filters=
+			{"blocked": 0, "workspace": module})
+	else:
+		custom_links =  frappe.get_list("Module View Link", fields=["label","section","type","icon", "_doctype","_module","_report","_page","link","use_section_set_in_doctype"], filters=
+			{"blocked": 0, "module_name": module})
+
 		
 	for link in custom_links:
 		
@@ -267,8 +267,6 @@ def get_custom_links(data,module):
 			["icon", "color","shown_in"])
 			
 		if section_shown_in != "none":
-		
-		
 			name = link.label
 			if link.type == "doctype":
 				name = link._doctype

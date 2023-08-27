@@ -1,10 +1,11 @@
 {
+ "actions": [],
  "beta": 1,
  "creation": "2017-11-08 02:33:14.770339",
  "doctype": "DocType",
- "document_type": "Customize",
  "engine": "InnoDB",
  "field_order": [
+  "workspace",
   "module_name",
   "section",
   "label",
@@ -30,15 +31,13 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Module Page",
-   "options": "Module Def",
-   "reqd": 1
+   "options": "Module Def"
   },
   {
    "fieldname": "section",
    "fieldtype": "Link",
    "label": "Section",
-   "options": "MRP Module Section",
-   "reqd": 1
+   "options": "MRP Module Section"
   },
   {
    "fieldname": "label",
@@ -129,9 +128,16 @@
    "fieldname": "icon",
    "fieldtype": "Data",
    "label": "Icon"
+  },
+  {
+   "fieldname": "workspace",
+   "fieldtype": "Link",
+   "label": "Workspace",
+   "options": "Workspace"
   }
  ],
- "modified": "2020-01-05 21:34:39.416122",
+ "links": [],
+ "modified": "2023-08-18 03:41:01.474681",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Module View Link",
@@ -161,5 +167,6 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [],
  "title_field": "label"
 }

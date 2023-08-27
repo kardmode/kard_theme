@@ -1,0 +1,138 @@
+#workspace-sidebar {
+	position: fixed;
+	top: 0;
+	right: -100%; /* Start the sidebar off-screen */
+	width: 300px;
+	padding: 15px; /* Add padding around the entire sidebar */
+	height: 100%;
+	background-color: #f4f4f4; /* Light background color */
+	transition: right 0.1s ease-in-out;
+	z-index: 2001; /* Above overlay */
+}
+
+  /* Responsive sidebar widths */
+  @media (max-width: 768px) {
+    #workspace-sidebar {
+      width: 70%; /* Adjust the width as needed */
+    }
+  }
+
+  @media (max-width: 480px) {
+    #workspace-sidebar {
+      width: 90%; /* Adjust the width as needed */
+    }
+  }
+
+  /* Opened sidebar state */
+  #workspace-sidebar.opened {
+    right: 0;
+  }
+  
+  
+  #searchBox {
+    padding: 10px;
+    width: 100%;
+    border: 1px solid #ccc;
+    margin-bottom: 10px;
+    border-radius: 5px;
+  }
+  
+#sidebarList {
+    list-style: none;
+    padding: 0;
+	height: calc(100vh - 120px); /* Adjust the height based on header and search box */
+	overflow-y: auto;
+}
+
+#global-sidebarList {
+    list-style: none;
+    padding: 0;
+	overflow-y: auto;
+}
+
+  #sidebarList li, #global-sidebarList li{
+    border-bottom: 1px solid #ccc;
+  }
+  
+  #sidebarList li a, #global-sidebarList li a{
+    width:100%;
+	display:block;
+	min-height:20px;
+	text-decoration:none;
+	padding: 10px 5px;
+  }
+  
+  #sidebarList li a:hover, #global-sidebarList li a:hover{
+    background-color:#edd;
+  }
+  
+  
+   #sidebarHeading {
+    font-size: 1rem; /* Adjust the font size as needed */
+    margin-bottom: 10px;
+  }
+  
+  
+   .workspace-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.3); /* Semi-transparent black */
+    display: none;
+    z-index: 2000; /* Ensure the overlay is on top of main content */
+  }
+  
+  
+  
+  #global-sidebar {
+	position: fixed;
+	top: 0;
+	left: -100%; /* Start the sidebar off-screen */
+	width: 300px;
+	padding: 10px; /* Add padding around the entire sidebar */
+	height: 100%;
+	background-color: #f4f4f4; /* Light background color */
+	transition: left 0.1s ease-in-out;
+	z-index: 2001; /* Above overlay */
+	    overflow-y: auto; /* Add scroll when content overflows */
+
+}
+
+  /* Responsive sidebar widths */
+  @media (max-width: 768px) {
+    #global-sidebar {
+      width: 70%; /* Adjust the width as needed */
+    }
+  }
+
+  @media (max-width: 480px) {
+    #global-sidebar {
+      width: 90%; /* Adjust the width as needed */
+    }
+  }
+
+  /* Opened sidebar state */
+  #global-sidebar.opened {
+    left: 0;
+  }
+  
+  #globalmenu {
+	/* border: 2px solid #111; /* Add a white border */ */
+	/* border-radius: 5px; /* Add border radius to make it circular */	   */
+	cursor: pointer;
+	/* display: inline-block; */
+	margin-right: 10px;
+	/* padding:1px; */
+}
+
+.overlay-sidebar {
+		@media (max-width: 991px) {
+			transition: transform 50ms ease-in-out !important;
+		}
+}
+
+.close-sidebar {
+    transition: opacity 50ms ease-in-out !important;
+}
