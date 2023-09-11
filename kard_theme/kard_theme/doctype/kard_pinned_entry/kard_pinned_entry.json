@@ -1,7 +1,8 @@
 {
  "actions": [],
  "beta": 1,
- "creation": "2019-11-20 20:05:06.240556",
+ "creation": "2023-09-01 10:28:24.654714",
+ "default_view": "List",
  "doctype": "DocType",
  "document_type": "Setup",
  "engine": "InnoDB",
@@ -9,8 +10,8 @@
   "module_name",
   "label",
   "category",
-  "description",
   "column_break_3",
+  "idx",
   "color",
   "icon",
   "reverse",
@@ -23,12 +24,8 @@
   "_dashboard",
   "link",
   "column_break_10",
-  "standard",
-  "custom",
   "hidden",
-  "blocked",
-  "force_show",
-  "idx"
+  "blocked"
  ],
  "fields": [
   {
@@ -40,57 +37,17 @@
   {
    "fieldname": "label",
    "fieldtype": "Data",
-   "in_list_view": 1,
    "label": "Label"
-  },
-  {
-   "default": "0",
-   "fieldname": "standard",
-   "fieldtype": "Check",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Standard"
-  },
-  {
-   "default": "0",
-   "fieldname": "custom",
-   "fieldtype": "Check",
-   "label": "Custom",
-   "read_only": 1
   },
   {
    "fieldname": "column_break_3",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "description",
-   "fieldtype": "Small Text",
-   "label": "Description"
-  },
-  {
    "fieldname": "category",
    "fieldtype": "Link",
    "label": "Category",
    "options": "Kard Desktop Category"
-  },
-  {
-   "default": "0",
-   "fieldname": "hidden",
-   "fieldtype": "Check",
-   "label": "Hidden"
-  },
-  {
-   "default": "0",
-   "fieldname": "blocked",
-   "fieldtype": "Check",
-   "label": "Blocked"
-  },
-  {
-   "default": "0",
-   "fieldname": "force_show",
-   "fieldtype": "Check",
-   "label": "Force Show",
-   "read_only": 1
   },
   {
    "fieldname": "section_break_7",
@@ -102,7 +59,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Type",
-   "options": "module\nlist\nlink\npage\nquery-report\nreport\ndashboard\ntree"
+   "options": "list\nlink\npage\nquery-report\nreport\ndashboard\ntree"
   },
   {
    "fieldname": "_doctype",
@@ -161,16 +118,28 @@
    "options": "Dashboard"
   },
   {
+   "default": "0",
+   "fieldname": "hidden",
+   "fieldtype": "Check",
+   "label": "hidden"
+  },
+  {
+   "default": "0",
+   "fieldname": "blocked",
+   "fieldtype": "Check",
+   "label": "blocked"
+  },
+  {
    "fieldname": "reference",
    "fieldtype": "Data",
    "label": "Reference"
   }
  ],
  "links": [],
- "modified": "2023-09-05 08:04:24.558273",
+ "modified": "2023-09-05 08:24:24.708415",
  "modified_by": "Administrator",
  "module": "Kard Theme",
- "name": "Kard Desktop Icon",
+ "name": "Kard Pinned Entry",
  "owner": "Administrator",
  "permissions": [
   {

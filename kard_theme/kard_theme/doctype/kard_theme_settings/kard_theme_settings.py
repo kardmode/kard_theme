@@ -7,80 +7,21 @@ from six import iteritems
 import frappe
 import json
 from frappe import _
-from frappe.desk.moduleview import combine_common_sections,apply_permissions,get_table_with_counts
-from kard_theme.kard_theme.doctype.kard_desktop_icon.kard_desktop_icon import get_desktop_icons,clear_desktop_icons_cache
-from frappe.desk.moduleview import (get_onboard_items)
 from frappe.model.document import Document
-from frappe.cache_manager import build_domain_restriced_doctype_cache, build_domain_restriced_page_cache, build_table_count_cache
+from frappe.boot import get_allowed_pages, get_allowed_reports
+from frappe.cache_manager import (
+	build_domain_restriced_doctype_cache,
+	build_domain_restriced_page_cache,
+	build_table_count_cache,
+)
+from kard_theme.kard_theme.doctype.kard_desktop_icon.kard_desktop_icon import get_desktop_icons,clear_desktop_icons_cache
 
 class KardThemeSettings(Document):
+	@frappe.whitelist()	
 	def clear_user_icons(self):
-		fields = ['name','module_name', 'hidden', 'label', 'link', 'type', 'icon', 'color', 'description', 'category',
-			'_doctype', '_report', 'idx', 'force_show', 'reverse', 'custom', 'standard', 'blocked']
+		frappe.db.sql('delete from `tabKard Desktop Icon` where standard=0')
+		clear_desktop_icons_cache()
 
-		
-		user_icons = frappe.db.get_all('Kard Desktop Icon', fields=fields,
-			filters={'standard': 0})
-			
-		
-			
-		for icon in user_icons:
-			frappe.delete_doc('Kard Desktop Icon', icon.name, ignore_missing=True)
-
-		
-	def initialize_standard_icons(self,default_category=""):	
-		frappe.db.sql('delete from `tabKard Desktop Icon` where standard=1')
-		
-		modules_list = frappe.db.get_all('Module Def',
-			fields=['name','app_name'], filters={})
-			
-		
-		for i, m in enumerate(modules_list):
-			new_icon = frappe.get_doc({
-				'doctype': 'Kard Desktop Icon',
-				'module_name': m.name,
-				'label': m.name,
-				'standard': 1,
-				'app': m.app_name,
-				'color': 'grey',
-				'icon': 'octicon octicon-file-directory',
-				'idx': i,
-				'category':default_category
-			}).insert()
-			
-	def sync_standard_icons(self):
-		
-		modules_list = frappe.db.get_all('Module Def',
-			fields=[], filters={})
-		
-		module_names = []
-		
-		for m in modules_list:
-			module_names.append(m.name)
-					
-		icons = frappe.db.get_all('Module Def',
-			fields=[], filters={})
-		
-		for m in standard_icons:
-			if m.name not in module_names:
-				frappe.db.sql('delete from `tabKard Desktop Icon` where module_name=%s',m.name)
-				
-	def copy_from_desktop_icons(self,default_category=""):
-		frappe.db.sql('delete from `tabKard Desktop Icon`')
-		
-		desktop_icons = frappe.db.sql("""SELECT * FROM `tabDesktop Icon`""", as_dict=1)
-		for m in desktop_icons:
-			# new_doc = {}
-			# for key in desktop_icons:
-				# new_doc[key] = m.key
-			if m['category']:
-				if not frappe.db.get_value("Kard Desktop Category", m['category']):
-					m['category'] = default_category
-					
-			m['doctype'] = 'Kard Desktop Icon'
-			frappe.get_doc(m).insert()
-		
-	
 @frappe.whitelist()
 def get_theme_info():
 	settings = get_theme_settings()
@@ -95,8 +36,7 @@ def get_theme_settings():
 	return settings
 	
 @frappe.whitelist()
-def get(module, build=True, is_workspace=0):
-	
+def get(module, build=False, is_workspace=0):
 	try:
 		boot = frappe.sessions.get()
 	except Exception as e:
@@ -112,6 +52,8 @@ def get(module, build=True, is_workspace=0):
 
 	data = combine_common_sections(data)
 	data = apply_permissions(data)
+	
+	data = check_pinned(data)
 	
 	if len(data) == 0:
 		items = []
@@ -161,12 +103,48 @@ def get(module, build=True, is_workspace=0):
 						count = doctype_contains_a_record(name)
 
 						item["count"] = count
-
+	
 	out = {
 		"data": data
 	}
 
 	return out
+	
+def check_pinned(data):
+	user = frappe.session.user
+
+	for s in data:
+		for d in s['items']:
+			favorite = 0
+			favorites = []
+			if d.type == 'report':
+				favorites = frappe.db.get_all('Kard Pinned Entry',
+							fields=['name'], filters= {"_report": d.name,'owner': user})				
+			elif d.type == 'doctype':
+				link = d.get('link') or ''
+				favorites = frappe.db.get_all('Kard Pinned Entry',
+							fields=['name'], filters= {"_doctype": d.name,"link":link,'owner': user})
+				
+			if favorites:
+				favorite = 1
+			
+			d["favorite"] = favorite
+			
+			# if favorite == 1:
+				# pinned.append(d)
+			# else:
+				# unpinned.append(d)
+				
+		# Sort the list using the custom key function
+		s['items']  = sorted(s['items'], key=custom_sort_key)
+				
+	return data
+	
+# Custom sorting key function
+def custom_sort_key(item):
+    # Sort by 'favorite' values (1 comes before 0)
+    # Then, sort alphabetically by 'label'
+    return (-item["favorite"], item["label"])
 	
 def build_standard_config(module, doctype_info):
 	data = []
@@ -192,8 +170,9 @@ def add_section(data, label, icon, items,color="#7f8c8d",shown_in="module_view")
 	
 def add_custom_doctypes(data, doctype_info, module):
 
+	sections = frappe.db.get_all('MRP Module Section',
+			fields=["name", "icon", "shown_in"], filters={}, order_by='name')
 
-	sections =  frappe.get_list("MRP Module Section", fields=["name", "icon", "shown_in"],order_by="name")
 	for link in sections:
 		if link.shown_in != "none":
 			add_section(data, _(link.name), link.icon,
@@ -210,7 +189,6 @@ def add_custom_doctypes(data, doctype_info, module):
 def get_doctype_info(module):
 	"""Returns list of non child DocTypes for given module."""
 	active_domains = frappe.get_active_domains()
-	
 	
 	doctype_fields = ["'doctype' as type", "name", "description", "document_type",
 		"custom", "issingle","beta","icon","name as label"]
@@ -250,17 +228,17 @@ def get_doctype_info(module):
 		d["icon"] = ""
 	return doctype_info
 
-
 def get_custom_links(data,module,is_workspace=False):
 	custom_links = []
+	filters = {"blocked": 0, "module_name": module}
 	if is_workspace:
-		custom_links =  frappe.get_list("Module View Link", fields=["label","section","type","icon", "_doctype","_module","_report","_page","link","use_section_set_in_doctype"], filters=
-			{"blocked": 0, "workspace": module})
-	else:
-		custom_links =  frappe.get_list("Module View Link", fields=["label","section","type","icon", "_doctype","_module","_report","_page","link","use_section_set_in_doctype"], filters=
-			{"blocked": 0, "module_name": module})
-
-		
+		filters = {"blocked": 0, "workspace": module}
+	
+	fields=["label","section","type","icon", "_doctype","_module","_report","_page","link","use_section_set_in_doctype"]
+	
+	custom_links = frappe.db.get_all('Module View Link',
+			fields=fields, filters=filters, order_by='name')
+	
 	for link in custom_links:
 		
 		section_icon, section_color,section_shown_in = frappe.db.get_value("MRP Module Section", link.section, 
@@ -305,10 +283,10 @@ def get_custom_links(data,module,is_workspace=False):
 				"label": _(link.label),
 				"link": link.link,
 			}],section_color,section_shown_in)
-			
-			
-	
+					
 def get_custom_report_list(module):
+	user = frappe.session.user
+
 	"""Returns list on new style reports for modules."""
 	report_fields = ["name", "ref_doctype", "report_type"]
 	report_meta = frappe.get_meta("Report")
@@ -317,26 +295,32 @@ def get_custom_report_list(module):
 	if report_meta.has_field('favorite'):
 		report_fields += ["favorite"]
 		order_by = "favorite desc, name"
+		
 	reports =  frappe.get_list("Report", fields=report_fields, filters=
 		{"disabled": 0, "module": module},
 		order_by=order_by)
 		
 	out = []
 	for r in reports:
+		global_favorite = 0
+		favorite = 0
+		favorite_icon = ""
+		if "favorite" in r and r.favorite == 1:
+			favorite_icon = "star"
+			global_favorite = 1
+
 		out.append({
 			"type": "report",
 			"doctype": r.ref_doctype,
 			"is_query_report": 1 if r.report_type in ("Query Report", "Script Report", "Custom Report") else 0,
 			"label": _(r.name),
 			"name": r.name,
-			"icon": "fa fa-star" if ("favorite" in r and r.favorite == 1) else "",
-			"favorite": 1 if "favorite" in r and r.favorite == 1 else 0
+			"icon": favorite_icon,
+			"favorite": favorite,
+			"global_favorite": global_favorite
 		})
 
 	return out
-
-
-
 
 @frappe.whitelist()
 def get_desktop_settings():
@@ -345,10 +329,6 @@ def get_desktop_settings():
 	except Exception as e:
 		boot = frappe._dict(status='failed', error = str(e))
 		print(frappe.get_traceback())
-
-	if not boot.kard_settings.enable_dynamic_module_view:
-		from frappe.desk.moduleview import get_desktop_settings as _get_desktop_settings
-		return _get_desktop_settings()
 
 	from frappe.desk.moduleview import get_home_settings
 
@@ -359,7 +339,8 @@ def get_desktop_settings():
 	for m in all_modules:
 		modules_by_name[m['module_name']] = m
 
-	categories =  frappe.get_list("Kard Desktop Category", fields=["name"],order_by="idx")
+	categories = frappe.db.get_all('Kard Desktop Category',
+			fields=["name"], filters={}, order_by='name')
 	module_categories = []
 	for m in categories:
 		module_categories.append(m.name)
@@ -401,7 +382,6 @@ def get_desktop_settings():
 			user_modules_by_category[category] = [module for module in modules if module.module_name not in hidden_modules]
 
 	return user_modules_by_category
-
 
 def get_modules_from_all_apps_for_user(user=None):
 	if not user:
@@ -501,7 +481,6 @@ def in_domains(module,active_domains):
 		return False
 	return True
 	
-	
 @frappe.whitelist()
 def update_hidden_modules(category_map):
 	category_map = frappe.parse_json(category_map)
@@ -530,3 +509,80 @@ def update_hidden_modules(category_map):
 def set_home_settings(home_settings):
 	frappe.cache().hset('home_settings', frappe.session.user, home_settings)
 	frappe.db.set_value('User', frappe.session.user, 'home_settings', json.dumps(home_settings))
+	
+	
+def combine_common_sections(data):
+	"""Combine sections declared in separate apps."""
+	sections = []
+	sections_dict = {}
+	for each in data:
+		if each["label"] not in sections_dict:
+			sections_dict[each["label"]] = each
+			sections.append(each)
+		else:
+			sections_dict[each["label"]]["items"] += each["items"]
+
+	return sections
+	
+def apply_permissions(data):
+	default_country = frappe.db.get_default("country")
+
+	user = frappe.get_user()
+	user.build_permissions()
+
+	allowed_pages = get_allowed_pages()
+	allowed_reports = get_allowed_reports()
+
+	new_data = []
+	for section in data:
+		new_items = []
+
+		for item in section.get("items") or []:
+			item = frappe._dict(item)
+
+			if item.country and item.country != default_country:
+				continue
+
+			if (
+				(item.type == "doctype" and item.name in user.can_read)
+				or (item.type == "page" and item.name in allowed_pages)
+				or (item.type == "report" and item.name in allowed_reports)
+				or item.type == "help"
+			):
+
+				new_items.append(item)
+
+		if new_items:
+			new_section = section.copy()
+			new_section["items"] = new_items
+			new_data.append(new_section)
+
+	return new_data
+	
+def get_table_with_counts():
+	counts = frappe.cache().get_value("information_schema:counts")
+	if counts:
+		return counts
+	else:
+		return build_table_count_cache()
+		
+def get_onboard_items(app, module):
+	onboard_items = []
+	fallback_items = []
+
+	if not sections:
+		doctype_info = get_doctype_info(module)
+		sections = build_standard_config(module, doctype_info)
+
+	for section in sections:
+		for item in section["items"]:
+			if item.get("onboard", 0) == 1:
+				onboard_items.append(item)
+
+			# in case onboard is not set
+			fallback_items.append(item)
+
+			if len(onboard_items) > 5:
+				return onboard_items
+
+	return onboard_items or fallback_items

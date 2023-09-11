@@ -19,7 +19,7 @@
 
   @media (max-width: 480px) {
     #workspace-sidebar {
-      width: 90%; /* Adjust the width as needed */
+      width: 70%; /* Adjust the width as needed */
     }
   }
 
@@ -109,7 +109,7 @@
 
   @media (max-width: 480px) {
     #global-sidebar {
-      width: 90%; /* Adjust the width as needed */
+      width: 70%; /* Adjust the width as needed */
     }
   }
 
@@ -118,14 +118,16 @@
     left: 0;
   }
   
-  #globalmenu {
-	/* border: 2px solid #111; /* Add a white border */ */
-	/* border-radius: 5px; /* Add border radius to make it circular */	   */
+#globalmenu {
 	cursor: pointer;
-	/* display: inline-block; */
 	margin-right: 10px;
-	/* padding:1px; */
 }
+
+#globalmenu:hover {
+	border: 2px solid #999; 
+	border-radius: 2px; 
+}
+
 
 .overlay-sidebar {
 		@media (max-width: 991px) {
@@ -135,4 +137,111 @@
 
 .close-sidebar {
     transition: opacity 50ms ease-in-out !important;
+}
+
+
+.icon-grid {
+	display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    grid-auto-rows: minmax(100px, 1fr);
+    column-gap: 15px;
+    row-gap: 15px;
+    align-items: center;
+	padding-bottom:10px;
+}
+
+.icon-horizontal {
+	overflow-x:scroll;
+	white-space:nowrap;
+	padding-bottom:0px;
+}
+
+.kt-case-wrapper{
+    position: relative;
+    margin: 0px;
+	display:inline-block;
+	text-align: center;
+
+}
+
+.kt-app-icon {
+    padding: 20px;
+    display: inline-block;
+    margin: auto;
+    text-align: center;
+    border-radius: 16px;
+    cursor: pointer;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+.kt-app-icon .inner, .kt-app-icon i {
+    font-size: 32px;
+    min-width: 32px;
+    color: #fafbfc;
+    display: inline-block;
+    transition: 0.2s;
+    -webkit-transition: 0.2s;
+    text-shadow: -1px 1px 5px rgba(0, 0, 0, 0.15);
+}
+.kt-case-label {
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 0.4px;
+    text-align: center;
+    margin-top: 10px;
+    transition: 0.2s;
+    -webkit-transition: 0.2s;
+	color:black !important;
+	text-shadow:0px 0px 0px !important;
+	user-select:none;
+}
+
+.circle {
+    position: absolute;
+    right: -10px !important;
+    top: -10px !important;
+    color: #fff;
+    background-color: #ff5858;
+    padding: 6px;
+    font-size: 12px;
+    line-height: 1;
+    border-radius: 25px;
+    min-width: 25px;
+    height: 25px;
+    text-align: center;
+    text-shadow: none;
+    letter-spacing: normal;
+    cursor: pointer;
+}
+
+@media (max-width: 767px)
+{
+	
+	.kt-app-icon {
+		/* padding: 10px; */
+		/* border-radius: 12px; */
+	}
+	.kt-case-wrapper {
+		/* width: 90px; */
+		/* height: 100px; */
+	}
+	.circle {
+		right: -10px !important;
+	}
+}
+
+@keyframes wiggle {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-4deg);
+  }
+  75% {
+    transform: rotate(4deg);
+  }
+}
+
+.wiggle {
+    animation: wiggle 0.4s ease-in-out infinite;
 }

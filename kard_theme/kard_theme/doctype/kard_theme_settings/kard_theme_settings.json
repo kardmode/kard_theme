@@ -1,4 +1,5 @@
 {
+ "actions": [],
  "beta": 1,
  "creation": "2019-08-14 07:29:29.143437",
  "doctype": "DocType",
@@ -8,20 +9,21 @@
  "field_order": [
   "enable_theme",
   "section_break_2",
+  "hide_default_desktop",
   "use_custom_home_page",
   "enable_bookmarks",
-  "enable_module_sidebar",
-  "enable_module_header",
-  "hide_default_desktop",
   "enable_bookmark_sorting",
+  "enable_module_header",
+  "enable_module_sidebar",
   "enable_links_by_module",
+  "enable_links_menus_in_workspace",
   "column_break_9",
   "initialize_standard_icons",
   "clear_user_icons",
   "sync_standard_icons",
-  "copy_desktop_icons",
   "module_view_section_section",
-  "enable_dynamic_module_view"
+  "enable_dynamic_module_view",
+  "check_workspace_btns"
  ],
  "fields": [
   {
@@ -32,36 +34,43 @@
   },
   {
    "default": "0",
+   "description": "Hides the default frappe desktop",
    "fieldname": "hide_default_desktop",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Hide Default Desktop"
   },
   {
+   "description": "Copies module information to create the standard icon list",
    "fieldname": "initialize_standard_icons",
    "fieldtype": "Button",
+   "hidden": 1,
    "label": "Initialize Standard Icons"
   },
   {
+   "description": "Deletes all user saved bookmarks",
    "fieldname": "clear_user_icons",
    "fieldtype": "Button",
    "label": "Clear User Icons"
   },
   {
+   "description": "Updates standard icon definitions with module info",
    "fieldname": "sync_standard_icons",
    "fieldtype": "Button",
+   "hidden": 1,
    "label": "Sync Standard Icons"
   },
   {
    "default": "0",
    "fieldname": "enable_module_sidebar",
    "fieldtype": "Check",
-   "label": "Enable Module Sidebar"
+   "label": "Enable Workspace Menu"
   },
   {
    "default": "0",
    "fieldname": "enable_module_header",
    "fieldtype": "Check",
-   "label": "Enable Module Desktop"
+   "label": "Enable Workspace Grid"
   },
   {
    "default": "0",
@@ -76,21 +85,19 @@
    "label": "Enable Bookmarks"
   },
   {
-   "fieldname": "copy_desktop_icons",
-   "fieldtype": "Button",
-   "label": "copy_desktop_icons"
-  },
-  {
    "default": "0",
    "fieldname": "use_custom_home_page",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Use Custom Home Page"
   },
   {
    "default": "0",
+   "description": "Instead of going to the module view page, clicking a standard icon opens a menu with links",
    "fieldname": "enable_links_by_module",
    "fieldtype": "Check",
-   "label": "Enable Links By Module"
+   "hidden": 1,
+   "label": "Enable Links Menu By Module"
   },
   {
    "fieldname": "column_break_9",
@@ -102,18 +109,32 @@
   },
   {
    "fieldname": "module_view_section_section",
-   "fieldtype": "Section Break",
-   "label": "Module View Section"
+   "fieldtype": "Section Break"
   },
   {
    "default": "0",
    "fieldname": "enable_dynamic_module_view",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Enable Dynamic Module View"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_links_menus_in_workspace",
+   "fieldtype": "Check",
+   "label": "Enable Links Menus In Workspace"
+  },
+  {
+   "default": "0",
+   "description": "Hides workspace buttons if the user is not allowed",
+   "fieldname": "check_workspace_btns",
+   "fieldtype": "Check",
+   "label": "Check Workspace Btns"
   }
  ],
  "issingle": 1,
- "modified": "2020-03-28 22:09:25.471251",
+ "links": [],
+ "modified": "2023-08-30 05:21:38.414478",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Kard Theme Settings",
@@ -130,5 +151,6 @@
  ],
  "quick_entry": 1,
  "sort_field": "modified",
- "sort_order": "DESC"
+ "sort_order": "DESC",
+ "states": []
 }
