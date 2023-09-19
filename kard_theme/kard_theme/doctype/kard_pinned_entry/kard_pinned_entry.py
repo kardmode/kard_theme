@@ -6,15 +6,11 @@ from frappe.model.document import Document
 from frappe.boot import get_allowed_pages, get_allowed_reports
 
 class KardPinnedEntry(Document):
-	def validate(self):
-		if not self.label:
-			self.label = self._doctype or self._report or self.module_name
-
 	def on_trash(self):
 		clear_pinned_icons_cache()
 		
 	# def after_doctype_insert():
-		# frappe.db.add_unique("Kard Pinned Entry", ("module_name", "owner", "standard"))
+		# frappe.db.add_unique("Kard Pinned Entry", ("label", "owner", "standard"))
 
 
 def get_pinned_icons(user=None):
@@ -26,8 +22,8 @@ def get_pinned_icons(user=None):
 	
 	set_cache = False
 	
-	fields = ['name','reference','module_name', 'hidden', 'label', 'link', 'type', 'icon', 'color', 'description', 'category',
-			'_doctype', '_report', 'idx','blocked']
+	fields = ['name','reference','hidden', 'label', 'link', 'type', 'icon', 'color', 'description', 'category',
+			'_doctype', 'idx','blocked']
 
 	
 	if not all_icons:
@@ -96,36 +92,38 @@ def get_pinned_icons(user=None):
 	return all_icons
 
 def is_icon_blocked(icon,blocked_modules,blocked_doctypes,allowed_pages,allowed_reports):
-	# if not frappe.db.get_value("Module Def", module):
-	if ((icon.type == "module" and icon.module_name in blocked_modules)
-		or (icon._doctype and icon._doctype in blocked_doctypes)
-		or (icon._page and icon._page not in allowed_pages)
-		or (icon._report and icon._report not in allowed_reports)
+	if ((icon.type == "Module" and icon.reference in blocked_modules)
+		or (icon.type == "DocType" and icon.reference in blocked_doctypes)
+		or (icon.type == "Page" and icon.reference not in allowed_pages)
+		or (icon.type == "Report" and icon.reference not in allowed_reports)
 	):
 		return True
 	
 	return False
 	
 @frappe.whitelist()
-def pin_user_icon(reference=None,_doctype=None, _report=None, label=None, link=None, type='link', standard=0, icon=None,color=None,remove=0):
+def pin_user_icon(args=None):
+	import json
+	args = json.loads(args)
+	reference = args.get("reference")
+	workspace = args.get("workspace")
+	link_to = reference
+	doc_view = args.get("doc_view")
+	_doctype = args.get("doctype")
+	_report = args.get("report")
+	label = args.get("label")
+	link = args.get("link")
+	type = args.get("type")
+	icon = args.get("icon")
+	color = args.get("color")
+	remove = args.get("remove")
+	standard = 0
 
-	icon_name = None
-	type = 'link'
-	type = str(type).lower() if type else 'link'
-
-	if(not type == 'link' and reference):
-		icon_name = frappe.db.exists('Kard Pinned Entry', {'standard': standard, 'reference': reference,
-			'owner': frappe.session.user,'type':type})
-	elif _report:
-		icon_name = frappe.db.exists('Kard Pinned Entry', {'standard': standard, '_report': _report,
-			'owner': frappe.session.user})
-	elif _doctype:
-		icon_name = frappe.db.exists('Kard Pinned Entry', {'standard': standard, '_doctype': _doctype,
-			'owner': frappe.session.user,'link':link})
-
+	icon_name = frappe.db.exists('Kard Pinned Entry', {'standard': standard, 'reference': reference,
+		'owner': frappe.session.user,'type':type})
 
 	if icon_name:
-		if remove == '1':
+		if remove == '1' or remove == 1:
 			frappe.delete_doc("Kard Desktop Icon", icon_name, ignore_permissions=True)
 			return icon_name
 	
@@ -138,11 +136,8 @@ def pin_user_icon(reference=None,_doctype=None, _report=None, label=None, link=N
 		if color:
 			frappe.db.set_value('Kard Pinned Entry', icon_name, 'color', color)
 	
-		if frappe.db.get_value('Kard Pinned Entry', icon_name, 'hidden'):
-			frappe.db.set_value('Kard Pinned Entry', icon_name, 'hidden', 0)
-
-	elif remove == '0':
-		if not label: label = reference or _report or _doctype 
+	elif remove == '0' or remove  == 0:
+		if not label: label = reference
 
 		idx = frappe.db.sql('select max(idx) from `tabKard Desktop Icon` where owner=%s',
 			frappe.session.user)[0][0] or \
@@ -154,8 +149,6 @@ def pin_user_icon(reference=None,_doctype=None, _report=None, label=None, link=N
 		elif _doctype:
 			userdefined_icon = frappe.db.get_value('DocType', _doctype, ['module'], as_dict=True)
 			_report = None
-
-		module_name = reference or _report or _doctype or label
 
 		fields = ["icon"]
 		order_by = "name"
@@ -171,23 +164,28 @@ def pin_user_icon(reference=None,_doctype=None, _report=None, label=None, link=N
 				fields, as_dict=True)
 
 		module_icon = frappe._dict()
-		module_icon.color = color or workspace_icon.get("kard_theme_color") or '#FFE8CD'
+		module_icon.color = color or (workspace_icon and workspace_icon.get("kard_theme_color")) or '#FFE8CD'
 		module_icon.reverse = 0
-		module_icon.icon = icon or workspace_icon.get("icon") or 'folder-normal'
-		
+		module_icon.icon = icon or (workspace_icon and workspace_icon.get("icon")) or 'folder-normal'
+				
 		try:
 			new_icon = frappe.get_doc({
-				'doctype': 'Kard Pinned Entry',
+				'doctype': 'Kard Desktop Icon',
 				'label': label,
-				'module_name': module_name,
+				'workspace': workspace,
+				'module_name': reference,
 				'link': link,
 				'type': type,
+				'link_to': link_to,
+				'doc_view': doc_view,
 				'_doctype': _doctype,
 				'_report': _report,
 				'icon': module_icon.icon,
 				'color': module_icon.color,
 				'reverse': module_icon.reverse,
 				'idx': idx + 1,
+				'custom': 1,
+				'standard': standard,
 				'reference':reference
 			}).insert(ignore_permissions=True)
 			clear_pinned_icons_cache()

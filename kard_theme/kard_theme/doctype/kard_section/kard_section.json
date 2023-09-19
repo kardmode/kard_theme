@@ -1,17 +1,17 @@
 {
+ "actions": [],
  "allow_rename": 1,
  "autoname": "field:section_name",
  "beta": 1,
  "creation": "2019-02-04 23:25:49.623833",
  "doctype": "DocType",
- "document_type": "Customize",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
   "section_name",
   "color",
   "icon",
-  "shown_in"
+  "idx"
  ],
  "fields": [
   {
@@ -24,25 +24,26 @@
   },
   {
    "fieldname": "color",
-   "fieldtype": "Data",
+   "fieldtype": "Color",
    "label": "color"
   },
   {
    "fieldname": "icon",
-   "fieldtype": "Data",
+   "fieldtype": "Icon",
    "label": "Icon"
   },
   {
-   "fieldname": "shown_in",
-   "fieldtype": "Select",
-   "label": "Shown In",
-   "options": "module_view\nmodule_menu\nnone"
+   "fieldname": "idx",
+   "fieldtype": "Int",
+   "label": "Sort Order"
   }
  ],
- "modified": "2020-01-05 21:28:04.897121",
+ "links": [],
+ "modified": "2023-09-19 06:10:39.697984",
  "modified_by": "Administrator",
  "module": "Kard Theme",
- "name": "MRP Module Section",
+ "name": "Kard Section",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -69,5 +70,6 @@
  ],
  "quick_entry": 1,
  "sort_field": "modified",
- "sort_order": "DESC"
+ "sort_order": "DESC",
+ "states": []
 }

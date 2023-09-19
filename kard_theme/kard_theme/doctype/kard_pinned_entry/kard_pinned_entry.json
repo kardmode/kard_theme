@@ -8,6 +8,7 @@
  "engine": "InnoDB",
  "field_order": [
   "module_name",
+  "workspace",
   "label",
   "category",
   "column_break_3",
@@ -17,6 +18,8 @@
   "reverse",
   "section_break_7",
   "type",
+  "link_to",
+  "doc_view",
   "reference",
   "_doctype",
   "_report",
@@ -31,13 +34,13 @@
   {
    "fieldname": "module_name",
    "fieldtype": "Data",
-   "label": "Module Name",
-   "reqd": 1
+   "label": "Module Name"
   },
   {
    "fieldname": "label",
    "fieldtype": "Data",
-   "label": "Label"
+   "label": "Label",
+   "reqd": 1
   },
   {
    "fieldname": "column_break_3",
@@ -59,7 +62,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Type",
-   "options": "list\nlink\npage\nquery-report\nreport\ndashboard\ntree"
+   "options": "DocType\nReport\nPage\nDashboard\nURL"
   },
   {
    "fieldname": "_doctype",
@@ -133,10 +136,28 @@
    "fieldname": "reference",
    "fieldtype": "Data",
    "label": "Reference"
+  },
+  {
+   "fieldname": "workspace",
+   "fieldtype": "Link",
+   "label": "Workspace",
+   "options": "Workspace"
+  },
+  {
+   "fieldname": "link_to",
+   "fieldtype": "Dynamic Link",
+   "label": "Link To",
+   "options": "type"
+  },
+  {
+   "fieldname": "doc_view",
+   "fieldtype": "Select",
+   "label": "Doc View",
+   "options": "\nList\nReport Builder\nDashboard\nTree\nNew\nCalendar\nKanban"
   }
  ],
  "links": [],
- "modified": "2023-09-05 08:24:24.708415",
+ "modified": "2023-09-16 07:50:43.098272",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Kard Pinned Entry",

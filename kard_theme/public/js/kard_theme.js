@@ -240,26 +240,26 @@ $.extend(frappe.desktop, {
 		{
 			if (!frappe.desktop.current_workspace || frappe.desktop.current_workspace != route[1])
 			{
-				frappe.desktop.current_workspace = route[1];
+				let workspace = frappe.desktop.current_workspace = route[1];
+				let module = route[1];
+				
 				var matchingItem = frappe.boot.allowed_workspaces.find(item => item.name === route[1]);
-				var module = route[1];
-				var is_workspace = 0;
 
 				if (matchingItem) {
-					module = matchingItem.module;
-					if(!module)
+					let new_module = matchingItem.module;
+					if(new_module)
 					{
-						module = route[1];
-						is_workspace = 1;
+						module = new_module;
 					}
 				}
+										``
 				var docs = [];
 				var reports = [];
 				frappe.call({
 					method: "kard_theme.kard_theme.doctype.kard_theme_settings.kard_theme_settings.get",
 					args: { 
 						module: module,
-						is_workspace:is_workspace
+						workspace: workspace,
 					},
 					callback: function(response) {
 						var data = response.message.data;
@@ -299,7 +299,6 @@ $.extend(frappe.desktop, {
 						  // If 'favorite' values are equal, compare 'label' values alphabetically
 						  return a.label.localeCompare(b.label);
 						});
-						
 						
 						frappe.desktop.reports = reports;
 						frappe.desktop.docs = docs;
@@ -389,14 +388,11 @@ $.extend(frappe.desktop, {
 	},
 	
 	initializeSidebar: function(title,items) {
-		
-		
 		let entries = items; // Sample array of entries
-
 		let sidebar = document.getElementById('workspace-sidebar');
-		  let overlay = document.querySelector('.workspace-overlay');
+		let overlay = document.querySelector('.workspace-overlay');
 		  
-		   if (!sidebar) {
+		if (!sidebar) {
 			  sidebar = document.createElement('div');
 			  sidebar.id = 'workspace-sidebar';
 			  
@@ -412,19 +408,19 @@ $.extend(frappe.desktop, {
 			  document.body.appendChild(sidebar);
 			}
 			
-			// If sidebar already exists, change the header content
-			var h2Element = sidebar.querySelector('h2');
-			if (h2Element) {
-				h2Element.textContent = title;
-			}
+		// If sidebar already exists, change the header content
+		var h2Element = sidebar.querySelector('h2');
+		if (h2Element) {
+			h2Element.textContent = title;
+		}
 
-			const sidebarList = sidebar.querySelector('#sidebarList');
-			sidebarList.innerHTML = ''; // Clear previous list items
+		const sidebarList = sidebar.querySelector('#sidebarList');
+		sidebarList.innerHTML = ''; // Clear previous list items
 
-			entries.forEach(entry => {
+		entries.forEach(entry => {
 					const listItem = document.createElement('li');
 					var aElement = document.createElement('a');
-					aElement.href = '/app/' + frappe.desktop.get_route_from_m(entry);
+					aElement.href = '/app/' + frappe.desktop.get_route_for_menu_links(entry);
 					aElement.textContent = entry.label;
 					if(entry.hasOwnProperty('global_favorite') && entry.global_favorite == 1)
 					{
@@ -453,27 +449,26 @@ $.extend(frappe.desktop, {
 					sidebarList.appendChild(listItem);
 				});
 									
-				const searchBox = sidebar.querySelector('#searchBox');
-				searchBox.addEventListener('input', () => {
-				  const searchText = searchBox.value.toLowerCase();
-				  const filteredEntries = entries.filter(entry => entry.label.toLowerCase().includes(searchText));
+		const searchBox = sidebar.querySelector('#searchBox');
+		searchBox.addEventListener('input', () => {
+				const searchText = searchBox.value.toLowerCase();
+				const filteredEntries = entries.filter(entry => entry.label.toLowerCase().includes(searchText));
 				  
-				  sidebarList.innerHTML = ''; // Clear previous list items
+				sidebarList.innerHTML = ''; // Clear previous list items
 				  
-				  filteredEntries.forEach(entry => {
+				filteredEntries.forEach(entry => {
 					const listItem = document.createElement('li');
 					var aElement = document.createElement('a');
-				aElement.href = '/app/' + frappe.desktop.get_route_from_m(entry);
+					aElement.href = '/app/' + frappe.desktop.get_route_for_menu_links(entry);
 					aElement.textContent = entry.label;
 					listItem.appendChild(aElement);
-					
-					  sidebarList.appendChild(listItem);
-				  });
+					sidebarList.appendChild(listItem);
 				});
+			});
 
-		  sidebar.classList.toggle('opened');
+		sidebar.classList.toggle('opened');
 
-		  if (!overlay) {
+		if (!overlay) {
 			overlay = document.createElement('div');
 			overlay.className = 'workspace-overlay';
 			document.body.appendChild(overlay);
@@ -484,7 +479,7 @@ $.extend(frappe.desktop, {
 			}); */
 		  }
 		  
-	  function closeSidebar() {
+		function closeSidebar() {
 			var sidebar = document.getElementById('workspace-sidebar');
 			var overlay = document.querySelector('.workspace-overlay');
 			if (sidebar) {
@@ -495,7 +490,7 @@ $.extend(frappe.desktop, {
 			}
 		}
 		  
-		  overlay.style.display = 'block';
+		overlay.style.display = 'block';
 		  
 		   // Event delegation for closing sidebar when any link is clicked
 		document.body.addEventListener('click', function(event) {
@@ -521,32 +516,32 @@ $.extend(frappe.desktop, {
 		
 	},
 	
-	get_route_from_m: function(m) {
+	get_route_for_menu_links: function(m) {
+		let type = (m.type).toLowerCase();
 		if(m.link) {
 			m.route=strip(m.link, "#");
 		}
-		else if(m.type==="doctype") {
-			if(frappe.model.is_single(m.name)) {
-				m.route =  m.name;
-			} else {
-				m.route = m.name;
-			}
+		else if(type==="doctype") {
+			m.route = m.name;
 			m.route = m.route.trim().replace(/\s+/g, '-').toLowerCase();
 		}
-		else if(m.type == "report")
+		else if(type == "report")
 		{
-			if(m.is_query_report === 1)
+			let is_query_report = m.is_query_report;
+			if(is_query_report === 1)
 				m.route="query-report/" + m.name;
-			else{
-				
+			else
+			{	
 				m.route = m.doctype.replace(/\s+/g, '-').toLowerCase() + "/view/report/" + m.name;
-				}
+			}
 		}
-		else if(m.type==="page") {
+		else if(type==="page") 
+		{
 			m.route = m.name;
 			m.route.trim().replace(/\s+/g, '-').toLowerCase();
 		}
-		else if(m.type==="dashboard") {
+		else if(type==="dashboard") 
+		{
 			m.route="dashboard-view/" + m.name;
 			m.route.trim().replace(/\s+/g, '-').toLowerCase();
 		}
@@ -699,7 +694,6 @@ $.extend(frappe.desktop, {
 		div_clearfix.setAttribute("class","clearfix");
 		new_container_div.appendChild(div_clearfix);
 		
-		
 		frappe.desktop.sortableDisable();
 		
 	},
@@ -719,29 +713,31 @@ $.extend(frappe.desktop, {
 		
 		var addedIcons =false;	
 		modules.forEach(m => {
-			if (m.standard === 1|| m.hidden === 1 || m.blocked ===1 || m.type ==="module") { return; }
+			let type = (m.type).toLowerCase();
+			if (m.standard === 1|| m.hidden === 1 || m.blocked ===1 || type ==="module") { return; }
 			if(!m.route) {
 				if(m.link) {
 					m.route=strip(m.link, "#");
 				}
-				else if(m.type==="doctype") {
-					m.route =  m._doctype;
+				else if(type==="doctype") {
+					m.route = m.reference;
 					m.route = m.route.trim().replace(/\s+/g, '-').toLowerCase();
 				}
-				else if(m.type == "report")
+				else if(type == "report")
 				{
-					if(m.is_query_report === 1)
-						m.route="query-report/" + m._report;
+					let is_query_report = m.is_query_report;
+					if(is_query_report === 1)
+						m.route="query-report/" + m.reference;
 					else{
-						m.route = m.doctype.replace(/\s+/g, '-').toLowerCase() + "/view/report/" + m._report;
+						m.route = m._doctype.replace(/\s+/g, '-').toLowerCase() + "/view/report/" + m.reference;
 					}
 				}
-				else if(m.type==="page") {
-					m.route = m.name;
+				else if(type==="page") {
+					m.route = m.reference;
 					m.route.trim().replace(/\s+/g, '-').toLowerCase();
 				}
-				else if(m.type==="dashboard") {
-					m.route="dashboard-view/" + m.name;
+				else if(type==="dashboard") {
+					m.route="dashboard-view/" + m.reference;
 					m.route.trim().replace(/\s+/g, '-').toLowerCase();
 				}				
 			}
@@ -754,11 +750,11 @@ $.extend(frappe.desktop, {
 			</svg>
 			`
 			
-			let label = m.label || m.module_name;
+			let label = m.label;
 			
-			let label_wrapper = '<div class="kt-case-wrapper" title="'+label+'" data-id="'+m.name+'" data-name="'+m.module_name+'" data-link="'+m.route+'">'
+			let label_wrapper = '<div class="kt-case-wrapper" title="'+label+'" data-id="'+m.name+'" data-name="'+m.reference+'" data-link="'+m.route+'">'
 			+ '<div class="kt-app-icon" style="background-color:'+ color +'">'+ icon_el
-			+ '<div class="circle module-notis hide" data-doctype="'+m.module_name+'"><span class="circle-text"></span></div>'
+			+ '<div class="circle module-notis hide" data-doctype="'+m.reference+'"><span class="circle-text"></span></div>'
 			+ '<div class="circle module-remove hide"><div class="circle-text"><b>&times</b></div></div>'
 			+ '</div>'
 			+ '<div class="kt-case-label ellipsis">'
@@ -811,34 +807,10 @@ $.extend(frappe.desktop, {
 			if (entries.hasOwnProperty(key)) {
 				let m = entries[key];
 				if (m.is_hidden !== 1) { 
+					let type = (m.type).toLowerCase();
 					let name = entries[key].name.replace(/\s+/g, '-').toLowerCase();
 					let iconVariable = 'icon-' + (entries[key].icon || 'folder-normal'); // Replace with your actual variable
 					m.route = '/app/' + name; // Generate href using the key
-					if(!m.route) {
-						if(m.link) {
-							m.route=strip(m.link, "#");
-						}
-						else if(m.type==="doctype") {
-							if(frappe.model.is_single(m._doctype)) {
-								m.route = 'Form/' + m._doctype;
-							} else {
-								m.route="List/" + m._doctype;
-							}
-						}
-						else if(m.type==="query-report") {
-							m.route="query-report/" + item.module_name;
-						}
-						else if(m.type==="report") {
-							m.route="List/" + m.doctype + "/Report/" + m.module_name;
-						}
-						else if(m.type==="page") {
-							m.route=m.module_name;
-						}
-						else if(m.type==="module") {
-							m.route="#modules/" + m.module_name;
-						}
-					}
-						
 					let color = m.kard_theme_color || m.color || "#ddd";
 					let icon = m.icon || 'folder-normal';
 					let icon_el = `
@@ -849,9 +821,9 @@ $.extend(frappe.desktop, {
 					
 					let label = m.title;
 					
-					let label_wrapper = '<div class="kt-case-wrapper" title="'+label+'" data-name="'+m.module_name+'" data-link="'+m.route+'">'
+					let label_wrapper = '<div class="kt-case-wrapper" title="'+label+'" data-name="'+name+'" data-link="'+m.route+'">'
 					+ '<div class="kt-app-icon" style="background-color:'+ color +'">'+ icon_el
-					+ '<div class="circle module-notis hide" data-doctype="'+m.module_name+'"><span class="circle-text"></span></div>'
+					+ '<div class="circle module-notis hide" data-doctype="'+ name +'"><span class="circle-text"></span></div>'
 					+ '<div class="circle module-remove hide"><div class="circle-text"><b>&times</b></div></div>'
 					+ '</div>'
 					+ '<div class="kt-case-label ellipsis">'
@@ -896,38 +868,39 @@ $.extend(frappe.desktop, {
 		let icon_grid = document.createElement('div');
 		icon_grid.setAttribute("class", "icon-grid");
 				
-		modules.sort((a, b) => (a.module_name > b.module_name) ? 1 : -1)
+		modules.sort((a, b) => (a.label > b.label) ? 1 : -1)
 		var addedIcons = false;
 		modules.forEach(m => {
-			if (m.standard === 0 || m.blocked === 1 || m.type !=="module" || m.hidden === 1) { return; }
+			let type = (m.type).toLowerCase();
+			if (m.standard === 0 || m.blocked === 1 || type !=="module" || m.hidden === 1) { return; }
 			if(!m.route) {
 				if(m.link) {
 					m.route=strip(m.link, "#");
 				}
-				else if(m.type==="doctype") {
+				else if(type==="doctype") {
 					if(frappe.model.is_single(m._doctype)) {
 						m.route = 'Form/' + m._doctype;
 					} else {
 						m.route="List/" + m._doctype;
 					}
 				}
-				else if(m.type==="query-report") {
-					m.route="query-report/" + item.module_name;
+				else if(type==="query-report") {
+					m.route="query-report/" + item.reference;
 				}
-				else if(m.type==="report") {
-					m.route="List/" + m.doctype + "/Report/" + m.module_name;
+				else if(type==="report") {
+					m.route="List/" + m.doctype + "/Report/" + m.reference;
 				}
-				else if(m.type==="page") {
-					m.route=m.module_name;
+				else if(type==="page") {
+					m.route=m.reference;
 				}
-				else if(m.type==="module") {
-					m.route="#modules/" + m.module_name;
+				else if(type==="module") {
+					m.route="#modules/" + m.reference;
 				}
 			}
 			
-			let label_wrapper = '<div class="kt-case-wrapper" title="'+m.label+'" data-name="'+m.module_name+'" data-link="'+m.route+'">'
+			let label_wrapper = '<div class="kt-case-wrapper" title="'+m.label+'" data-name="'+m.reference+'" data-link="'+m.route+'">'
 			+ '<div class="kt-app-icon" style="background-color:'+ m.color +'"><i class="'+m.icon+'"></i>'
-			+ '<div class="circle module-notis hide" data-doctype="'+m.module_name+'"><span class="circle-text"></span></div>'
+			+ '<div class="circle module-notis hide" data-doctype="'+m.reference+'"><span class="circle-text"></span></div>'
 			+ '<div class="circle module-remove hide"><div class="circle-text"><b>&times</b></div></div>'
 			+ '</div>'
 			+ '<div class="kt-case-label ellipsis">'
@@ -1064,7 +1037,6 @@ $.extend(frappe.desktop, {
 							frappe.call({
 								method: 'kard_theme.kard_theme.doctype.kard_desktop_icon.kard_desktop_icon.hide',
 								args: { 
-									module_name: name,
 									name:id
 								},
 								freeze: true,
@@ -1127,13 +1099,7 @@ $.extend(frappe.desktop, {
 				frappe.set_route(link);
 			}
 			return false;
-		} else {
-			var module = frappe.get_module(parent.attr("data-name"));
-			if (module && module.onclick) {
-				module.onclick();
-				return false;
-			}
-		}
+		} 
 	},
 	
 	open_module: function(parent) {
@@ -1149,12 +1115,6 @@ $.extend(frappe.desktop, {
 					frappe.set_route(link);
 				}
 				return false;
-			} else {
-				var module = frappe.get_module(parent.attr("data-name"));
-				if (module && module.onclick) {
-					module.onclick();
-					return false;
-				}
 			}
 		}	
 	},
@@ -1168,7 +1128,6 @@ $.extend(frappe.desktop, {
 				const $cases = $(wrapper).find('.kt-case-wrapper');
 
 				$cases.each(function(i, e) {
-					// new_order.push($(this).attr("data-name"));
 					new_order.push($(this).attr("data-id"));
 				});
 				
@@ -1212,13 +1171,9 @@ $.extend(frappe.desktop, {
 	
 	add_bookmark_link: function() {
 		let route = frappe.get_route()
-		let type = '';
-		let doctype = '';
-		let label = '';
-		let report = '';
-		let reference = '';
 		let new_link = '';
 		let pin_link = '';
+		let args = {'report':''};
 		
 		// Find the div element with the specified classes and without display: none style
 		const divElement = document.querySelector('div.content.page-container:not([style*="display: none"])');
@@ -1257,11 +1212,11 @@ $.extend(frappe.desktop, {
 			}
 		}
 		else{
-			console.log("no divelement");
+			console.log("no div element");
 			return;
 		}
 			
-
+		// console.log(route);
 		new_link.innerHTML = '<a class="grey-link dropdown-item">'+__("Bookmark")+'</a>';
 		new_link.classList.add('hide');
 		$(new_link).unbind();
@@ -1269,46 +1224,58 @@ $.extend(frappe.desktop, {
 		pin_link.innerHTML = '<a class="grey-link dropdown-item">'+__("Pin")+'</a>';
 		pin_link.classList.add('hide');
 		$(pin_link).unbind();
-		
 		if(!route) {
 			return;
 		}
 		else if (route[0] === 'List') {
-			type = route[0];
-			label = route[1];
-			doctype = route[1];
-			reference = route[1];
+			if (route.length > 3 && route[2] === 'Report') {
+				args['type'] = 'Report';
+				args['doc_view'] = 'Report Builder';
+				args['label'] = route[3];
+				args['report'] = route[3];
+				args['doctype'] = route[1];
+				args['reference'] = route[3];
+			}
+			else
+			{
+				args['type'] = 'DocType';
+				args['doc_view'] = route[0];
+				args['label'] = route[1];
+				args['doctype'] = route[1];
+				args['reference'] = route[1];
+			}
+			
 		}
 		else if (route[0] === 'Form') {
-			type = route[0];
-			label = route[1];
-			doctype = route[1];
-			reference = route[1];
-			if(!frappe.model.is_single(reference)) {
+			args['type'] = 'DocType';
+			args['doc_view'] = '';
+			args['label'] = route[1];
+			args['doctype'] = route[1];
+			args['reference'] = route[1];
+
+			if(!frappe.model.is_single(route[1])) {
 				return;
 			} 
 		}
 		else if (route[0] === 'Tree') {
-			type = route[0];
-			label = route[1];
-			doctype = route[1];
-			reference = route[1];
-		}
-		else if (route[2] === 'Report') {
-			type = route[2];
-			label = route[1];
-			report = route[1];
-			reference = route[1];
+			args['type'] = 'DocType';
+			args['doc_view'] = route[0];
+			args['label'] = route[1];
+			args['doctype'] = route[1];
+			args['reference'] = route[1];
 		}
 		else if (route[0] === 'query-report') {
-			type = route[0];
-			label = route[1];
-			report = route[1];
+			args['type'] = 'Report';
+			args['doc_view'] = '';
+			args['label'] = route[1];
+			args['report'] = route[1];
+			args['reference'] = route[1];
 		}
 		else if (route[0] === 'dashboard') {
-			type = route[0];
-			label = route[1];
-			reference = route[1];
+			args['type'] = 'Dashboard';
+			args['doc_view'] = 'Dashboard';
+			args['label'] = route[1];
+			args['reference'] = route[1];
 		}
 		else
 		{
@@ -1317,12 +1284,65 @@ $.extend(frappe.desktop, {
 		
 		new_link.classList.remove('hide');
 		pin_link.classList.remove('hide');
-		frappe.desktop.show_bookmark_dialog(new_link,label,type,reference,doctype,report);
-		frappe.desktop.show_pin_dialog(pin_link,label,type,reference,doctype,report);
+		
+		let titleAttributeValue = (document.querySelector(".title-area h3[title]")?.getAttribute("title") || "");
+		args['label'] = titleAttributeValue || args['label'];
+		
+		frappe.desktop.show_bookmark_dialog(new_link,args);
+		frappe.desktop.show_pin_dialog(pin_link,args);
 	},
 	
-	show_bookmark_dialog: function(new_link,label,type,reference,doctype,report) {
-		let msg = __('Bookmark') + ' ' + label + ' To Desktop?'
+	show_bookmark_dialog: function(new_link,args) {
+		let msg = __('Bookmark') + ' ' + args['label'] + ' To Desktop?'
+		$(new_link).on("click", function() {
+			let fields = [
+				{
+					label: __('Label'),
+					fieldname: 'label',
+					fieldtype: 'Data',
+					default:args['label']
+				},
+				{
+					label: __('Icon'),
+					fieldname: 'icon',
+					fieldtype: 'Icon',
+				},
+				{
+					label: __('Color'),
+					fieldname: 'color',
+					fieldtype: 'Color',
+				},
+
+			];
+						
+			const d = new frappe.ui.Dialog({
+				title: msg,
+				fields: fields,
+				primary_action_label: __('Add'),
+				primary_action: (values) => {
+					args['label'] = values.label;
+					args['color'] = values.color;
+					args['icon'] = values.icon;
+					args['remove'] = 0;
+					frappe.desktop.add_bookmark(args);
+					d.hide();
+				},
+				secondary_action_label: __('Remove'),
+				secondary_action: (values) => {
+					args['label'] = values.label;
+					args['color'] = values.color;
+					args['icon'] = values.icon;
+					args['remove'] = 1;
+					frappe.desktop.add_bookmark(args);
+					d.hide();
+				},
+			}); 
+			d.show();
+		});
+	},
+	
+	show_pin_dialog : function(new_link,args) {
+		let msg = __('Pin') + ' ' + args['label'] + ' To Menu?';
 		$(new_link).on("click", function() {
 			let fields = [
 				{
@@ -1348,52 +1368,20 @@ $.extend(frappe.desktop, {
 				fields: fields,
 				primary_action_label: __('Add'),
 				primary_action: (values) => {
-					frappe.desktop.add_bookmark(values.label,type,reference,doctype,report,values.icon,values.color,0);
+					args['label'] = values.label;
+					args['color'] = values.color;
+					args['icon'] = values.icon;
+					args['remove'] = 0;
+					frappe.desktop.add_pin(args);
 					d.hide();
 				},
 				secondary_action_label: __('Remove'),
 				secondary_action: (values) => {
-					frappe.desktop.add_bookmark(values.label,type,reference,doctype,report,values.icon,values.color,1);
-					d.hide();
-				},
-			}); 
-			d.show();
-		});
-	},
-	
-	show_pin_dialog : function(new_link,label,type,reference,doctype,report) {
-		let msg = __('Pin') + ' ' + label + ' To Menu?';
-		$(new_link).on("click", function() {
-			let fields = [
-				{
-					label: __('Label'),
-					fieldname: 'label',
-					fieldtype: 'Data',
-				},
-				{
-					label: __('Icon'),
-					fieldname: 'icon',
-					fieldtype: 'Icon',
-				},
-				{
-					label: __('Color'),
-					fieldname: 'color',
-					fieldtype: 'Color',
-				},
-
-			];
-						
-			const d = new frappe.ui.Dialog({
-				title: msg,
-				fields: fields,
-				primary_action_label: __('Add'),
-				primary_action: (values) => {
-					frappe.desktop.add_pin(values.label,type,reference,doctype,report,values.icon,values.color,0);
-					d.hide();
-				},
-				secondary_action_label: __('Remove'),
-				secondary_action: (values) => {
-					frappe.desktop.add_pin(values.label,type,reference,doctype,report,values.icon,values.color,1);
+					args['label'] = values.label;
+					args['color'] = values.color;
+					args['icon'] = values.icon;
+					args['remove'] = 1;
+					frappe.desktop.add_pin(args);
 					d.hide();
 				},
 			}); 
@@ -1402,19 +1390,13 @@ $.extend(frappe.desktop, {
 						
 	},
 
-	add_bookmark: function(label, type, reference, doctype, report, icon, color,remove) {
+	add_bookmark: function(args) {
+		args['url'] = args['link'] = frappe.get_route_str();
+		args['workspace'] = 'Home';
 		frappe.call({
 			method: 'kard_theme.kard_theme.doctype.kard_desktop_icon.kard_desktop_icon.add_user_icon',
 			args: {
-				'link': frappe.get_route_str(),
-				'label': label,
-				'type': type,
-				'_doctype': doctype,
-				'_report': report,
-				'icon':icon,
-				'color':color,
-				'reference':reference,
-				'remove':remove
+				'args':args,
 			},
 			callback: function(r) {
 				if(r.message) {
@@ -1424,19 +1406,13 @@ $.extend(frappe.desktop, {
 		});
 	},
 	
-	add_pin: function(label, type, reference, doctype, report, icon, color,remove) {
+	add_pin: function(args) {
+		args['url'] = args['link'] = frappe.get_route_str();
+		args['workspace'] = 'Home';
 		frappe.call({
 			method: 'kard_theme.kard_theme.doctype.kard_pinned_entry.kard_pinned_entry.pin_user_icon',
 			args: {
-				'link': frappe.get_route_str(),
-				'label': label,
-				'type': type,
-				'_doctype': doctype,
-				'_report': report,
-				'icon':icon,
-				'color':color,
-				'reference':reference,
-				'remove':remove
+				'args':args,
 			},
 			callback: function(r) {
 				if(r.message) {

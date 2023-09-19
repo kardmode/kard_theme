@@ -15,12 +15,15 @@
   "enable_bookmark_sorting",
   "enable_module_header",
   "enable_module_sidebar",
-  "enable_links_by_module",
-  "enable_links_menus_in_workspace",
   "column_break_9",
   "initialize_standard_icons",
   "clear_user_icons",
   "sync_standard_icons",
+  "section_break_y9bi6",
+  "enable_links_by_module",
+  "enable_links_menus_in_workspace",
+  "use_doctype_info_for_links_menu",
+  "show_uncategorized_in_link_menu",
   "module_view_section_section",
   "enable_dynamic_module_view",
   "check_workspace_btns"
@@ -130,11 +133,27 @@
    "fieldname": "check_workspace_btns",
    "fieldtype": "Check",
    "label": "Check Workspace Btns"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_uncategorized_in_link_menu",
+   "fieldtype": "Check",
+   "label": "Show Uncategorized In Link Menu"
+  },
+  {
+   "fieldname": "section_break_y9bi6",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "use_doctype_info_for_links_menu",
+   "fieldtype": "Check",
+   "label": "Use Doctype Info for Links Menu"
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2023-08-30 05:21:38.414478",
+ "modified": "2023-09-16 12:30:45.838220",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Kard Theme Settings",

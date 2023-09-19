@@ -10,20 +10,16 @@
   "section",
   "label",
   "column_break_3",
-  "hidden",
-  "blocked",
-  "force_show",
-  "use_section_set_in_doctype",
+  "icon",
+  "color",
   "section_break_7",
   "type",
+  "link_to",
+  "doc_view",
   "_doctype",
-  "_module",
-  "_report",
-  "_page",
   "link",
   "column_break_10",
-  "color",
-  "icon"
+  "use_section_set_in_doctype"
  ],
  "fields": [
   {
@@ -37,7 +33,7 @@
    "fieldname": "section",
    "fieldtype": "Link",
    "label": "Section",
-   "options": "MRP Module Section"
+   "options": "Kard Section"
   },
   {
    "fieldname": "label",
@@ -48,25 +44,6 @@
   {
    "fieldname": "column_break_3",
    "fieldtype": "Column Break"
-  },
-  {
-   "default": "0",
-   "fieldname": "hidden",
-   "fieldtype": "Check",
-   "label": "Hidden"
-  },
-  {
-   "default": "0",
-   "fieldname": "blocked",
-   "fieldtype": "Check",
-   "label": "Blocked"
-  },
-  {
-   "default": "0",
-   "fieldname": "force_show",
-   "fieldtype": "Check",
-   "label": "Force Show",
-   "read_only": 1
   },
   {
    "default": "0",
@@ -84,31 +61,13 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Type",
-   "options": "doctype\nlink\npage\nreport\nmodule\ndashboard\ntree"
+   "options": "DocType\nReport\nPage\nDashboard\nURL"
   },
   {
    "fieldname": "_doctype",
    "fieldtype": "Link",
    "label": "_doctype",
    "options": "DocType"
-  },
-  {
-   "fieldname": "_module",
-   "fieldtype": "Link",
-   "label": "_module",
-   "options": "Module Def"
-  },
-  {
-   "fieldname": "_report",
-   "fieldtype": "Link",
-   "label": "_report",
-   "options": "Report"
-  },
-  {
-   "fieldname": "_page",
-   "fieldtype": "Link",
-   "label": "_page",
-   "options": "Page"
   },
   {
    "fieldname": "link",
@@ -130,6 +89,18 @@
    "label": "Icon"
   },
   {
+   "fieldname": "doc_view",
+   "fieldtype": "Select",
+   "label": "doc_view",
+   "options": "\nList\nReport Builder\nDashboard\nTree\nNew\nCalendar\nKanban"
+  },
+  {
+   "fieldname": "link_to",
+   "fieldtype": "Dynamic Link",
+   "label": "Link To",
+   "options": "type"
+  },
+  {
    "fieldname": "workspace",
    "fieldtype": "Link",
    "label": "Workspace",
@@ -137,10 +108,10 @@
   }
  ],
  "links": [],
- "modified": "2023-09-11 03:16:50.932694",
+ "modified": "2023-09-19 04:22:51.769190",
  "modified_by": "Administrator",
  "module": "Kard Theme",
- "name": "Module View Link",
+ "name": "Kard Module Link",
  "owner": "Administrator",
  "permissions": [
   {
@@ -154,15 +125,6 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
-  },
-  {
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "All",
-   "share": 1
   }
  ],
  "sort_field": "modified",

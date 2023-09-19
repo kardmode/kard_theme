@@ -12,16 +12,11 @@ from frappe.boot import get_allowed_pages, get_allowed_reports
 from six import iteritems, string_types
 
 class KardDesktopIcon(Document):
-	def validate(self):
-		if not self.label:
-			self.label = self._doctype or self._report or self.module_name
-
 	def on_trash(self):
 		clear_desktop_icons_cache()
 		
 	# def after_doctype_insert():
-		# frappe.db.add_unique("Kard Desktop Icon", ("module_name", "owner", "standard"))
-
+		# frappe.db.add_unique("Kard Desktop Icon", ("label", "owner", "standard"))
 
 def get_desktop_icons(user=None, enable_links_by_module = False):
 	'''Return desktop icons for user'''
@@ -29,19 +24,17 @@ def get_desktop_icons(user=None, enable_links_by_module = False):
 		user = frappe.session.user
 
 	all_icons = frappe.cache().hget('desktop_icons', user)
-	
 	set_cache = False
-	
-	fields = ['name','reference','module_name', 'hidden', 'label', 'link', 'type', 'icon', 'color', 'description', 'category',
-			'_doctype', '_report', 'idx', 'force_show', 'reverse', 'custom', 'standard', 'blocked']
-
-	
+		
 	if not all_icons:
 		all_icons = {}
 		all_icons["user_icons"] = []
 		all_icons["standard_icons"] = []
 		set_cache = True
 		
+		fields = ['name','reference','link_to','doc_view','hidden', 'label', 'link', 'type', 'icon', 'color', 'description', 'category',
+			'_doctype', 'idx', 'force_show', 'reverse', 'custom', 'standard', 'blocked']
+
 		user_icons = frappe.db.get_all('Kard Desktop Icon', fields=fields,
 			filters={'standard': 0, 'owner': user})
 			
@@ -59,52 +52,66 @@ def get_desktop_icons(user=None, enable_links_by_module = False):
 		allowed_pages = get_allowed_pages()
 		allowed_reports = get_allowed_reports()
 		
+		from kard_theme.kard_theme.doctype.kard_theme_settings.kard_theme_settings import get
+		
 		for icon in user_icons:
 			if is_icon_blocked(icon,blocked_modules,blocked_doctypes,allowed_pages,allowed_reports):
 				icon.hidden = 1
 				icon.blocked = icon.hidden
 	
-			if icon.blocked == 0 and icon.type == 'module' and enable_links_by_module:
-				module_items = get_data(icon.module_name)
-				if len(module_items) == 0:
-					icon.hidden = 1
-					icon.hidden_in_standard = 1
-				icon["items"] = module_items
+			if icon.blocked == 0:
+				if icon.type == 'module' and enable_links_by_module:
+					module_items = get(icon.reference)
+					if len(module_items) == 0:
+						icon.hidden = 1
+						icon.hidden_in_standard = 1
+					icon["items"] = module_items
+					
+			if icon.get('category') == '' or icon.get('category') == None:
+				icon.category = "Uncategorized"
+			
+			# translate
+			if icon.label: icon.label = _(icon.label)
+
+		standard_icons = frappe.db.get_all('Kard Desktop Icon', fields=fields,
+			filters={'standard': 1})
+			
+		for icon in standard_icons:
+			if is_icon_blocked(icon,blocked_modules,blocked_doctypes,allowed_pages,allowed_reports):
+				icon.hidden = 1
+				icon.blocked = icon.hidden
+	
+			if icon.blocked == 0:
+				if icon.type == 'module' and enable_links_by_module:
+					module_items = get(icon.reference)
+					if len(module_items) == 0:
+						icon.hidden = 1
+						icon.hidden_in_standard = 1
+					icon["items"] = module_items
 					
 			if icon.get('category') == '' or icon.get('category') == None:
 				icon.category = "Uncategorized"
 				
-	
-		standard_icons = [m for m in user_icons if m.get('standard') == 1]
-		user_icons = [m for m in user_icons if m.get('standard') == 0]
-		
-		# translate
-		for d in user_icons:
-			if d.label: d.label = _(d.label)
-		
-		# sort by idx
-		user_icons.sort(key = lambda a: a.idx)	
+			# translate
+			if icon.label: icon.label = _(icon.label)
 
-		# translate
-		for d in standard_icons:
-			if d.label: d.label = _(d.label)
-		
+		# sort by idx
+		user_icons.sort(key = lambda a: a.idx)
 		# sort by label
 		standard_icons.sort(key = lambda a: a.label)		
 		
-		categories = frappe.db.get_all('Kard Desktop Category',
-			fields=["name"], filters={}, order_by='name')		
-		module_categories = [m.name for m in categories]
+		# categories = frappe.db.get_all('Kard Desktop Category',
+			# fields=["name"], filters={}, order_by='name')		
+		# module_categories = [m.name for m in categories]
 			
-		from collections import OrderedDict 
-		user_modules_by_category = OrderedDict() 		
-		for category in module_categories:
-			user_modules_by_category[category] = [m for m in standard_icons if m.get('category') == category]
-		
-		user_modules_by_category["Uncategorized"] = [m for m in standard_icons if m.get('category') == 'Uncategorized']
+		# from collections import OrderedDict 
+		# user_modules_by_category = OrderedDict() 		
+		# for category in module_categories:
+			# user_modules_by_category[category] = [m for m in user_icons if m.get('category') == category]
+		# user_modules_by_category["Uncategorized"] = [m for m in user_icons if m.get('category') == 'Uncategorized']
 
 		all_icons["user_icons"] = user_icons
-		all_icons["standard_icons"] = user_modules_by_category
+		all_icons["standard_icons"] = standard_icons
 						
 	if set_cache:
 		frappe.cache().hset('desktop_icons', user, all_icons)
@@ -113,33 +120,39 @@ def get_desktop_icons(user=None, enable_links_by_module = False):
 
 def is_icon_blocked(icon,blocked_modules,blocked_doctypes,allowed_pages,allowed_reports):
 	# if not frappe.db.get_value("Module Def", module):
-	if ((icon.type == "module" and icon.module_name in blocked_modules)
-		or (icon._doctype and icon._doctype in blocked_doctypes)
-		or (icon._page and icon._page not in allowed_pages)
-		or (icon._report and icon._report not in allowed_reports)
+	if ((icon.type == "Module" and icon.reference in blocked_modules)
+		or (icon.type == "DocType" and icon.reference in blocked_doctypes)
+		or (icon.type == "Page" and icon.reference not in allowed_pages)
+		or (icon.type == "Report" and icon.reference not in allowed_reports)
 	):
 		return True
 	
 	return False
 
 @frappe.whitelist()
-def add_user_icon(reference=None,_doctype=None, _report=None, label=None, link=None, type='link', standard=0, icon=None,color=None,remove=0):
-	'''Add a new user Kard Desktop Icon to the desktop'''	
-	icon_name = None
-	type = 'link'
-	type = str(type).lower() if type else 'link'
+def add_user_icon(args=None):
+	'''Add a new user Kard Desktop Icon to the desktop'''
+	import json
+	args = json.loads(args)
+	reference = args.get("reference")
+	workspace = args.get("workspace")
+	link_to = reference
+	doc_view = args.get("doc_view")
+	_doctype = args.get("doctype")
+	_report = args.get("report")
+	label = args.get("label")
+	link = args.get("link")
+	type = args.get("type")
+	icon = args.get("icon")
+	color = args.get("color")
+	remove = args.get("remove")
+	standard = 0
 	
-	if(not type == 'link' and reference):
-		icon_name = frappe.db.exists('Kard Desktop Icon', {'standard': standard, 'reference': reference,
-			'owner': frappe.session.user,'type':type})
-	elif _report:
-		icon_name = frappe.db.exists('Kard Desktop Icon', {'standard': standard, '_report': _report,
-			'owner': frappe.session.user})
-	elif _doctype:
-		icon_name = frappe.db.exists('Kard Desktop Icon', {'standard': standard, '_doctype': _doctype,
-			'owner': frappe.session.user,'link':link})
+	icon_name = frappe.db.exists('Kard Desktop Icon', {'standard': standard, 'reference': reference,
+		'owner': frappe.session.user,'type':type,'doc_view':doc_view})
+	
 	if icon_name:
-		if remove == '1':
+		if remove == '1' or remove == 1:
 			frappe.delete_doc("Kard Desktop Icon", icon_name, ignore_permissions=True)
 			return icon_name
 	
@@ -152,13 +165,10 @@ def add_user_icon(reference=None,_doctype=None, _report=None, label=None, link=N
 		if color:
 			frappe.db.set_value('Kard Desktop Icon', icon_name, 'color', color)
 	
-		if frappe.db.get_value('Kard Desktop Icon', icon_name, 'hidden'):
-			frappe.db.set_value('Kard Desktop Icon', icon_name, 'hidden', 0)
-		
 		clear_desktop_icons_cache()
 
-	elif remove == '0':
-		if not label: label = reference or _report or _doctype 
+	elif remove == '0' or remove  == 0:
+		if not label: label = reference
 
 		idx = frappe.db.sql('select max(idx) from `tabKard Desktop Icon` where owner=%s',
 			frappe.session.user)[0][0] or \
@@ -170,8 +180,6 @@ def add_user_icon(reference=None,_doctype=None, _report=None, label=None, link=N
 		elif _doctype:
 			userdefined_icon = frappe.db.get_value('DocType', _doctype, ['module'], as_dict=True)
 			_report = None
-
-		module_name = reference or _report or _doctype or label
 		
 		fields = ["icon"]
 		order_by = "name"
@@ -187,17 +195,20 @@ def add_user_icon(reference=None,_doctype=None, _report=None, label=None, link=N
 				fields, as_dict=True)
 
 		module_icon = frappe._dict()
-		module_icon.color = color or workspace_icon.get("kard_theme_color") or '#FFE8CD'
+		module_icon.color = color or (workspace_icon and workspace_icon.get("kard_theme_color")) or '#FFE8CD'
 		module_icon.reverse = 0
-		module_icon.icon = icon or workspace_icon.get("icon") or 'folder-normal'
+		module_icon.icon = icon or (workspace_icon and workspace_icon.get("icon")) or 'folder-normal'
 		
 		try:
 			new_icon = frappe.get_doc({
 				'doctype': 'Kard Desktop Icon',
 				'label': label,
-				'module_name': module_name,
+				'workspace': workspace,
+				'module_name': reference,
 				'link': link,
 				'type': type,
+				'link_to': link_to,
+				'doc_view': doc_view,
 				'_doctype': _doctype,
 				'_report': _report,
 				'icon': module_icon.icon,
@@ -212,7 +223,7 @@ def add_user_icon(reference=None,_doctype=None, _report=None, label=None, link=N
 			icon_name = new_icon.name
 
 		except frappe.UniqueValidationError as e:
-			frappe.throw(_('Bookmark already exists'))
+			raise e
 		except Exception as e:
 			raise e
 	return icon_name
@@ -222,92 +233,22 @@ def set_order(new_order, user=None):
 	'''set new order by duplicating user icons (if user is set) or set global order'''
 	if isinstance(new_order, string_types):
 		new_order = json.loads(new_order)
-	for i, module_name in enumerate(new_order):
+	for i, name in enumerate(new_order):
+		icon = None
 		if user:
-			# icon = get_user_copy(module_name, user)
-			icon = get_user_copy_by_name(module_name, user)
-		else:
-			name = frappe.db.get_value('Kard Desktop Icon',
-				{'standard': 1, 'module_name': module_name})
-			if name:
-				icon = frappe.get_doc('Kard Desktop Icon', name)
-			else:
-				# standard icon missing, create one for DocType
-				name = add_user_icon(module_name, standard=1)
-				icon = frappe.get_doc('Kard Desktop Icon', name)
+			icon = get_user_copy_by_name(name, user)
 
-		icon.db_set('idx', i)
+		if icon:
+			icon.db_set('idx', i)
 
 	clear_desktop_icons_cache()
 
-def set_hidden(module_name, user=None, hidden=1):
-	'''Set module hidden property for given user. If user is not specified,
-		hide/unhide it globally'''
-	if user:
-		icon = get_user_copy(module_name, user)
-
-		if icon and icon.custom and hidden:
-			frappe.delete_doc(icon.doctype, icon.name, ignore_permissions=True)
-			return
-
-		# hidden by user
-		# icon.db_set('hidden', hidden)
-	else:
-		icon = frappe.get_doc('Kard Desktop Icon', {'standard': 1, 'module_name': module_name})
-
-		# blocked is globally hidden
-		icon.db_set('blocked', hidden)
 
 def clear_desktop_icons_cache(user=None):
 	frappe.cache().hdel('desktop_icons', user or frappe.session.user)
 	frappe.cache().hdel('bootinfo', user or frappe.session.user)
 
-def get_user_copy(module_name, user=None):
-	'''Return user copy (Kard Desktop Icon) of the given module_name. If user copy does not exist, create one.
-
-	:param module_name: Name of the module
-	:param user: User for which the copy is required (optional)
-	'''
-	if not user:
-		user = frappe.session.user
-
-	desktop_icon_name = frappe.db.get_value('Kard Desktop Icon',
-		{'module_name': module_name, 'owner': user, 'standard': 0})
-
-	if desktop_icon_name:
-		return frappe.get_doc('Kard Desktop Icon', desktop_icon_name)
-	else:
-		return make_user_copy(module_name, user)
-
-def make_user_copy(module_name, user):
-	'''Insert and return the user copy of a standard Kard Desktop Icon'''
-	standard_name = frappe.db.get_value('Kard Desktop Icon', {'module_name': module_name, 'standard': 1})
-
-	if not standard_name:
-		frappe.throw(_('{0} not found').format(module_name), frappe.DoesNotExistError)
-
-	original = frappe.get_doc('Kard Desktop Icon', standard_name)
-
-	desktop_icon = frappe.get_doc({
-		'doctype': 'Kard Desktop Icon',
-		'standard': 0,
-		'owner': user,
-		'module_name': module_name
-	})
-
-	for key in ('app', 'label', 'route', 'type', '_doctype','_report','idx', 'reverse', 'force_show', 'link', 'icon', 'color'):
-		if original.get(key):
-			desktop_icon.set(key, original.get(key))
-
-	desktop_icon.insert(ignore_permissions=True)
-
-	return desktop_icon
-
 def get_user_copy_by_name(name, user=None):
-	'''Return user copy (Kard Desktop Icon) of the given module_name.
-	:param module_name: name of the shorcut doc
-	:param user: User for which the copy is required (optional)
-	'''
 	if not user:
 		user = frappe.session.user
 
@@ -319,14 +260,13 @@ def get_user_copy_by_name(name, user=None):
 	return None
 
 @frappe.whitelist()
-def hide(module_name, name=None, user = None):
+def hide(name=None, user = None):
 	if not user:
 		user = frappe.session.user
 	try:
 		if name:
 			frappe.delete_doc("Kard Desktop Icon", name, ignore_permissions=True)
-		else:
-			set_hidden(module_name, user, hidden = 1)
+		
 		clear_desktop_icons_cache()
 	except Exception:
 		return False
