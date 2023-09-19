@@ -22,9 +22,6 @@
   "doc_view",
   "reference",
   "_doctype",
-  "_report",
-  "_page",
-  "_dashboard",
   "link",
   "column_break_10",
   "hidden",
@@ -71,12 +68,6 @@
    "options": "DocType"
   },
   {
-   "fieldname": "_report",
-   "fieldtype": "Link",
-   "label": "_report",
-   "options": "Report"
-  },
-  {
    "fieldname": "link",
    "fieldtype": "Small Text",
    "label": "Link"
@@ -107,18 +98,6 @@
    "fieldname": "reverse",
    "fieldtype": "Check",
    "label": "reverse"
-  },
-  {
-   "fieldname": "_page",
-   "fieldtype": "Link",
-   "label": "_page",
-   "options": "Page"
-  },
-  {
-   "fieldname": "_dashboard",
-   "fieldtype": "Link",
-   "label": "_dashboard",
-   "options": "Dashboard"
   },
   {
    "default": "0",
@@ -157,7 +136,7 @@
   }
  ],
  "links": [],
- "modified": "2023-09-16 07:50:43.098272",
+ "modified": "2023-09-19 07:34:22.452165",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Kard Pinned Entry",

@@ -16,7 +16,6 @@
   "type",
   "link_to",
   "doc_view",
-  "_doctype",
   "link",
   "column_break_10",
   "use_section_set_in_doctype"
@@ -64,12 +63,6 @@
    "options": "DocType\nReport\nPage\nDashboard\nURL"
   },
   {
-   "fieldname": "_doctype",
-   "fieldtype": "Link",
-   "label": "_doctype",
-   "options": "DocType"
-  },
-  {
    "fieldname": "link",
    "fieldtype": "Small Text",
    "label": "Link"
@@ -108,7 +101,7 @@
   }
  ],
  "links": [],
- "modified": "2023-09-19 04:22:51.769190",
+ "modified": "2023-09-19 06:56:51.213731",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Kard Module Link",

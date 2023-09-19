@@ -19,18 +19,16 @@ def get_pinned_icons(user=None):
 		user = frappe.session.user
 
 	all_icons = frappe.cache().hget('pinned_icons', user)
-	
 	set_cache = False
-	
-	fields = ['name','reference','hidden', 'label', 'link', 'type', 'icon', 'color', 'description', 'category',
-			'_doctype', 'idx','blocked']
-
-	
+		
 	if not all_icons:
 		all_icons = {}
 		all_icons["user_icons"] = []
 		
 		set_cache = True
+		
+		fields = ['name','reference','hidden', 'label', 'link', 'type', 'icon', 'color', 'description', 'category',
+				'_doctype','idx','blocked']
 		
 		user_icons = frappe.db.get_all('Kard Pinned Entry', fields=fields,
 			filters={'standard': 0, 'owner': user})
@@ -55,6 +53,8 @@ def get_pinned_icons(user=None):
 		allowed_pages = get_allowed_pages()
 		allowed_reports = get_allowed_reports()
 		
+		from kard_theme.kard_theme.doctype.kard_theme_settings.kard_theme_settings import get
+
 		for icon in user_icons:
 			if is_icon_blocked(icon,blocked_modules,blocked_doctypes,allowed_pages,allowed_reports):
 				icon.hidden = 1
@@ -63,9 +63,9 @@ def get_pinned_icons(user=None):
 			if icon.get('category') == '' or icon.get('category') == None:
 				icon.category = "Uncategorized"
 				
-		# translate
-		for d in user_icons:
-			if d.label: d.label = _(d.label)
+			# translate
+			if icon.label: icon.label = _(icon.label)
+				
 		
 		# sort by label
 		user_icons.sort(key = lambda a: a.label)			
@@ -119,12 +119,12 @@ def pin_user_icon(args=None):
 	remove = args.get("remove")
 	standard = 0
 
-	icon_name = frappe.db.exists('Kard Pinned Entry', {'standard': standard, 'reference': reference,
-		'owner': frappe.session.user,'type':type})
-
+	icon_name = frappe.db.exists('Kard Pinned Entry', {'reference': reference,
+		'owner': frappe.session.user,'type':type,'doc_view':doc_view})
+	
 	if icon_name:
 		if remove == '1' or remove == 1:
-			frappe.delete_doc("Kard Desktop Icon", icon_name, ignore_permissions=True)
+			frappe.delete_doc("Kard Pinned Entry", icon_name, ignore_permissions=True)
 			return icon_name
 	
 		if label:
@@ -139,10 +139,9 @@ def pin_user_icon(args=None):
 	elif remove == '0' or remove  == 0:
 		if not label: label = reference
 
-		idx = frappe.db.sql('select max(idx) from `tabKard Desktop Icon` where owner=%s',
-			frappe.session.user)[0][0] or \
-			frappe.db.sql('select count(*) from `tabKard Desktop Icon` where standard=1')[0][0]
-		
+		idx = frappe.db.sql('select max(idx) from `tabKard Pinned Entry` where owner=%s',
+			frappe.session.user)[0][0] or 0
+			
 		userdefined_icon = None
 		if _report:
 			userdefined_icon = frappe.db.get_value('Report', _report, ['module'], as_dict=True)
@@ -170,7 +169,7 @@ def pin_user_icon(args=None):
 				
 		try:
 			new_icon = frappe.get_doc({
-				'doctype': 'Kard Desktop Icon',
+				'doctype': 'Kard Pinned Entry',
 				'label': label,
 				'workspace': workspace,
 				'module_name': reference,
@@ -189,11 +188,10 @@ def pin_user_icon(args=None):
 				'reference':reference
 			}).insert(ignore_permissions=True)
 			clear_pinned_icons_cache()
-
 			icon_name = new_icon.name
 
 		except frappe.UniqueValidationError as e:
-			frappe.throw(_('Bookmark already exists'))
+			raise e
 		except Exception as e:
 			raise e
 

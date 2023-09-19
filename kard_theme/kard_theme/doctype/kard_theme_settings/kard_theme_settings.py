@@ -116,19 +116,20 @@ def get(module=None,workspace=None, build=False):
 	
 def check_pinned(data):
 	user = frappe.session.user
+	
+	# pinned = frappe.db.get_all('Kard Pinned Entry',
+				# fields=['name'], filters= {'owner': user})
+			
 
 	for s in data:
 		for d in s['items']:
 			favorite = 0
 			favorites = []
-			if d.type == 'report':
-				favorites = frappe.db.get_all('Kard Pinned Entry',
-							fields=['name'], filters= {"_report": d.name,'owner': user})				
-			elif d.type == 'doctype':
-				link = d.get('link') or ''
-				favorites = frappe.db.get_all('Kard Pinned Entry',
-							fields=['name'], filters= {"_doctype": d.name,"link":link,'owner': user})
-				
+			link = d.get('link') or ''
+			type = get_type_from_string(d.type)
+			favorites = frappe.db.get_all('Kard Pinned Entry',
+						fields=['name'], filters= {"link_to": d.name,'type':type,'owner': user})
+						
 			if favorites:
 				favorite = 1
 			
@@ -138,6 +139,24 @@ def check_pinned(data):
 		s['items']  = sorted(s['items'], key=custom_sort_key)
 				
 	return data
+	
+def get_type_from_string(type):
+	# Array of strings (not necessarily lowercase)
+	string_array = ["DocType", "Report", "Page", "Dashboard","URL"]
+
+	# Convert the search string to lowercase
+	search_string_lower = type.lower()
+
+	# Initialize a variable to store the found string (if any)
+	found_string = None
+
+	# Iterate through the array and check for a match (case-insensitive)
+	for string in string_array:
+		if search_string_lower == string.lower():
+			found_string = string
+			break  # Stop searching once a match is found
+	
+	return found_string
 	
 # Custom sorting key function
 def custom_sort_key(item):
