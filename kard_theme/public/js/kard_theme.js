@@ -299,7 +299,6 @@ $.extend(frappe.desktop, {
 						  // If 'favorite' values are equal, compare 'label' values alphabetically
 						  return a.label.localeCompare(b.label);
 						});
-						
 						frappe.desktop.reports = reports;
 						frappe.desktop.docs = docs;
 					},
@@ -421,7 +420,10 @@ $.extend(frappe.desktop, {
 					const listItem = document.createElement('li');
 					var aElement = document.createElement('a');
 					aElement.href = '/app/' + frappe.desktop.get_route_for_menu_links(entry);
-					aElement.textContent = entry.label;
+					let label = entry.label;
+					if (entry.type == "Dashboard")
+						label = entry.label + " Dashboard"; 
+					aElement.textContent = label;
 					if(entry.hasOwnProperty('global_favorite') && entry.global_favorite == 1)
 					{
 						let spanElement = document.createElement('span');
@@ -460,7 +462,12 @@ $.extend(frappe.desktop, {
 					const listItem = document.createElement('li');
 					var aElement = document.createElement('a');
 					aElement.href = '/app/' + frappe.desktop.get_route_for_menu_links(entry);
-					aElement.textContent = entry.label;
+					
+					let label = entry.label;
+					if (entry.type == "Dashboard")
+						label = entry.label + " Dashboard"; 
+					aElement.textContent = label;
+
 					listItem.appendChild(aElement);
 					sidebarList.appendChild(listItem);
 				});
@@ -518,21 +525,21 @@ $.extend(frappe.desktop, {
 	
 	get_route_for_menu_links: function(m) {
 		let type = (m.type).toLowerCase();
-		if(m.link) {
-			m.route=strip(m.link, "#");
+		if(m.url) {
+			m.route=strip(m.url, "#");
 		}
 		else if(type==="doctype") {
 			m.route = m.name;
 			m.route = m.route.trim().replace(/\s+/g, '-').toLowerCase();
 		}
-		else if(type == "report")
+		else if(type === "report")
 		{
 			let is_query_report = m.is_query_report;
 			if(is_query_report === 1)
-				m.route="query-report/" + m.name;
+				m.route = "query-report/" + m.name;
 			else
 			{	
-				m.route = m.doctype.replace(/\s+/g, '-').toLowerCase() + "/view/report/" + m.name;
+				m.route = m.ref_doctype.replace(/\s+/g, '-').toLowerCase() + "/view/report/" + m.name;
 			}
 		}
 		else if(type==="page") 
@@ -545,9 +552,42 @@ $.extend(frappe.desktop, {
 			m.route="dashboard-view/" + m.name;
 			m.route.trim().replace(/\s+/g, '-').toLowerCase();
 		}
-		return m.route 
+		return m.route;
 	},
-		
+	
+	get_route_for_desktop_shorcuts: function(m) {
+		let type = (m.type).toLowerCase();
+		if (m.standard === 1|| m.hidden === 1 || m.blocked ===1 || type ==="module") { return; }
+		if(!m.route) {
+			if(m.url) {
+				m.route=strip(m.url, "#");
+			}
+			else if(type==="doctype") {
+				m.route = m.link_to;
+				m.route = m.route.trim().replace(/\s+/g, '-').toLowerCase();
+			}
+			else if(type === "report")
+			{
+				let is_query_report = m.is_query_report;
+				if(is_query_report === 1)
+					m.route="query-report/" + m.link_to;
+				else{
+					m.route = m.ref_doctype.replace(/\s+/g, '-').toLowerCase() + "/view/report/" + m.link_to;
+				}
+			}
+			else if(type==="page") {
+				m.route = m.link_to;
+				m.route.trim().replace(/\s+/g, '-').toLowerCase();
+			}
+			else if(type==="dashboard") {
+				m.route="dashboard-view/" + m.link_to;
+				m.route.trim().replace(/\s+/g, '-').toLowerCase();
+			}				
+		}
+		return m.route;
+	},
+	
+	
 	refresh: function() {
 		if(!frappe.boot.kard_settings.enable_theme)
 			return;
@@ -713,34 +753,7 @@ $.extend(frappe.desktop, {
 		
 		var addedIcons =false;	
 		modules.forEach(m => {
-			let type = (m.type).toLowerCase();
-			if (m.standard === 1|| m.hidden === 1 || m.blocked ===1 || type ==="module") { return; }
-			if(!m.route) {
-				if(m.link) {
-					m.route=strip(m.link, "#");
-				}
-				else if(type==="doctype") {
-					m.route = m.reference;
-					m.route = m.route.trim().replace(/\s+/g, '-').toLowerCase();
-				}
-				else if(type == "report")
-				{
-					let is_query_report = m.is_query_report;
-					if(is_query_report === 1)
-						m.route="query-report/" + m.reference;
-					else{
-						m.route = m._doctype.replace(/\s+/g, '-').toLowerCase() + "/view/report/" + m.reference;
-					}
-				}
-				else if(type==="page") {
-					m.route = m.reference;
-					m.route.trim().replace(/\s+/g, '-').toLowerCase();
-				}
-				else if(type==="dashboard") {
-					m.route="dashboard-view/" + m.reference;
-					m.route.trim().replace(/\s+/g, '-').toLowerCase();
-				}				
-			}
+			m.route = frappe.desktop.get_route_for_desktop_shorcuts(m);
 			
 			let color = m.color || "#ddd";
 			let icon = m.icon || 'folder-normal';
@@ -752,9 +765,9 @@ $.extend(frappe.desktop, {
 			
 			let label = m.label;
 			
-			let label_wrapper = '<div class="kt-case-wrapper" title="'+label+'" data-id="'+m.name+'" data-name="'+m.reference+'" data-link="'+m.route+'">'
+			let label_wrapper = '<div class="kt-case-wrapper" title="'+label+'" data-id="'+m.name+'" data-name="'+m.link_to+'" data-link="'+m.route+'">'
 			+ '<div class="kt-app-icon" style="background-color:'+ color +'">'+ icon_el
-			+ '<div class="circle module-notis hide" data-doctype="'+m.reference+'"><span class="circle-text"></span></div>'
+			+ '<div class="circle module-notis hide" data-doctype="'+m.link_to+'"><span class="circle-text"></span></div>'
 			+ '<div class="circle module-remove hide"><div class="circle-text"><b>&times</b></div></div>'
 			+ '</div>'
 			+ '<div class="kt-case-label ellipsis">'
@@ -855,7 +868,7 @@ $.extend(frappe.desktop, {
 		return desktop_icons_id;	
 	},
 	
-	// not used
+	// deprecated
 	render_module_desktop_icons: function(modules,title) { 
 		
 		let desktop_icons_id = document.createElement('div');
@@ -874,33 +887,33 @@ $.extend(frappe.desktop, {
 			let type = (m.type).toLowerCase();
 			if (m.standard === 0 || m.blocked === 1 || type !=="module" || m.hidden === 1) { return; }
 			if(!m.route) {
-				if(m.link) {
-					m.route=strip(m.link, "#");
+				if(m.url) {
+					m.route=strip(m.url, "#");
 				}
 				else if(type==="doctype") {
-					if(frappe.model.is_single(m._doctype)) {
-						m.route = 'Form/' + m._doctype;
+					if(frappe.model.is_single(m.link_to)) {
+						m.route = 'Form/' + m.link_to;
 					} else {
-						m.route="List/" + m._doctype;
+						m.route="List/" + m.link_to;
 					}
 				}
 				else if(type==="query-report") {
-					m.route="query-report/" + item.reference;
+					m.route="query-report/" + item.link_to;
 				}
 				else if(type==="report") {
-					m.route="List/" + m.doctype + "/Report/" + m.reference;
+					m.route="List/" + m.doctype + "/Report/" + m.link_to;
 				}
 				else if(type==="page") {
-					m.route=m.reference;
+					m.route=m.link_to;
 				}
 				else if(type==="module") {
-					m.route="#modules/" + m.reference;
+					m.route="#modules/" + m.link_to;
 				}
 			}
 			
-			let label_wrapper = '<div class="kt-case-wrapper" title="'+m.label+'" data-name="'+m.reference+'" data-link="'+m.route+'">'
+			let label_wrapper = '<div class="kt-case-wrapper" title="'+m.label+'" data-name="'+m.link_to+'" data-link="'+m.route+'">'
 			+ '<div class="kt-app-icon" style="background-color:'+ m.color +'"><i class="'+m.icon+'"></i>'
-			+ '<div class="circle module-notis hide" data-doctype="'+m.reference+'"><span class="circle-text"></span></div>'
+			+ '<div class="circle module-notis hide" data-doctype="'+m.link_to+'"><span class="circle-text"></span></div>'
 			+ '<div class="circle module-remove hide"><div class="circle-text"><b>&times</b></div></div>'
 			+ '</div>'
 			+ '<div class="kt-case-label ellipsis">'
@@ -1234,15 +1247,15 @@ $.extend(frappe.desktop, {
 				args['label'] = route[3];
 				args['report'] = route[3];
 				args['doctype'] = route[1];
-				args['reference'] = route[3];
+				args['link_to'] = route[3];
 			}
 			else
 			{
 				args['type'] = 'DocType';
-				args['doc_view'] = route[0];
+				args['doc_view'] = 'List';
 				args['label'] = route[1];
 				args['doctype'] = route[1];
-				args['reference'] = route[1];
+				args['link_to'] = route[1];
 			}
 			
 		}
@@ -1251,7 +1264,7 @@ $.extend(frappe.desktop, {
 			args['doc_view'] = '';
 			args['label'] = route[1];
 			args['doctype'] = route[1];
-			args['reference'] = route[1];
+			args['link_to'] = route[1];
 
 			if(!frappe.model.is_single(route[1])) {
 				return;
@@ -1259,23 +1272,23 @@ $.extend(frappe.desktop, {
 		}
 		else if (route[0] === 'Tree') {
 			args['type'] = 'DocType';
-			args['doc_view'] = route[0];
+			args['doc_view'] = 'Tree';
 			args['label'] = route[1];
 			args['doctype'] = route[1];
-			args['reference'] = route[1];
+			args['link_to'] = route[1];
 		}
 		else if (route[0] === 'query-report') {
 			args['type'] = 'Report';
 			args['doc_view'] = '';
 			args['label'] = route[1];
 			args['report'] = route[1];
-			args['reference'] = route[1];
+			args['link_to'] = route[1];
 		}
 		else if (route[0] === 'dashboard') {
 			args['type'] = 'Dashboard';
 			args['doc_view'] = 'Dashboard';
 			args['label'] = route[1];
-			args['reference'] = route[1];
+			args['link_to'] = route[1];
 		}
 		else
 		{
@@ -1286,7 +1299,7 @@ $.extend(frappe.desktop, {
 		pin_link.classList.remove('hide');
 		
 		let titleAttributeValue = (document.querySelector(".title-area h3[title]")?.getAttribute("title") || "");
-		args['label'] = titleAttributeValue || args['label'];
+		// args['label'] = titleAttributeValue || args['label'];
 		
 		frappe.desktop.show_bookmark_dialog(new_link,args);
 		frappe.desktop.show_pin_dialog(pin_link,args);
@@ -1349,6 +1362,7 @@ $.extend(frappe.desktop, {
 					label: __('Label'),
 					fieldname: 'label',
 					fieldtype: 'Data',
+					default:args['label']
 				},
 				{
 					label: __('Icon'),

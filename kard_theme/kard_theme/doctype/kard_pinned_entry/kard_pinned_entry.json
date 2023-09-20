@@ -7,10 +7,10 @@
  "document_type": "Setup",
  "engine": "InnoDB",
  "field_order": [
-  "module_name",
   "workspace",
   "label",
   "category",
+  "description",
   "column_break_3",
   "idx",
   "color",
@@ -20,19 +20,12 @@
   "type",
   "link_to",
   "doc_view",
-  "reference",
-  "_doctype",
-  "link",
+  "url",
   "column_break_10",
   "hidden",
   "blocked"
  ],
  "fields": [
-  {
-   "fieldname": "module_name",
-   "fieldtype": "Data",
-   "label": "Module Name"
-  },
   {
    "fieldname": "label",
    "fieldtype": "Data",
@@ -60,17 +53,6 @@
    "in_standard_filter": 1,
    "label": "Type",
    "options": "DocType\nReport\nPage\nDashboard\nURL"
-  },
-  {
-   "fieldname": "_doctype",
-   "fieldtype": "Link",
-   "label": "_doctype",
-   "options": "DocType"
-  },
-  {
-   "fieldname": "link",
-   "fieldtype": "Small Text",
-   "label": "Link"
   },
   {
    "fieldname": "column_break_10",
@@ -112,11 +94,6 @@
    "label": "blocked"
   },
   {
-   "fieldname": "reference",
-   "fieldtype": "Data",
-   "label": "Reference"
-  },
-  {
    "fieldname": "workspace",
    "fieldtype": "Link",
    "label": "Workspace",
@@ -133,10 +110,20 @@
    "fieldtype": "Select",
    "label": "Doc View",
    "options": "\nList\nReport Builder\nDashboard\nTree\nNew\nCalendar\nKanban"
+  },
+  {
+   "fieldname": "url",
+   "fieldtype": "Small Text",
+   "label": "URL"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
   }
  ],
  "links": [],
- "modified": "2023-09-19 07:34:22.452165",
+ "modified": "2023-09-20 09:14:22.936365",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Kard Pinned Entry",
@@ -158,5 +145,5 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "title_field": "module_name"
+ "title_field": "label"
 }

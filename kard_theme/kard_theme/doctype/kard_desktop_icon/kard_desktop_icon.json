@@ -11,6 +11,7 @@
   "category",
   "description",
   "column_break_3",
+  "idx",
   "color",
   "icon",
   "reverse",
@@ -18,16 +19,13 @@
   "type",
   "link_to",
   "doc_view",
-  "reference",
-  "_doctype",
-  "link",
+  "url",
   "column_break_10",
   "standard",
   "custom",
   "hidden",
   "blocked",
-  "force_show",
-  "idx"
+  "force_show"
  ],
  "fields": [
   {
@@ -99,17 +97,6 @@
    "options": "DocType\nReport\nPage\nDashboard\nURL"
   },
   {
-   "fieldname": "_doctype",
-   "fieldtype": "Link",
-   "label": "_doctype",
-   "options": "DocType"
-  },
-  {
-   "fieldname": "link",
-   "fieldtype": "Small Text",
-   "label": "Link"
-  },
-  {
    "fieldname": "column_break_10",
    "fieldtype": "Column Break"
   },
@@ -137,11 +124,6 @@
    "label": "reverse"
   },
   {
-   "fieldname": "reference",
-   "fieldtype": "Data",
-   "label": "Reference"
-  },
-  {
    "fieldname": "link_to",
    "fieldtype": "Dynamic Link",
    "label": "Link To",
@@ -158,10 +140,15 @@
    "fieldtype": "Link",
    "label": "Workspace",
    "options": "Workspace"
+  },
+  {
+   "fieldname": "url",
+   "fieldtype": "Small Text",
+   "label": "URL"
   }
  ],
  "links": [],
- "modified": "2023-09-16 09:54:19.049612",
+ "modified": "2023-09-20 07:19:56.844950",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Kard Desktop Icon",

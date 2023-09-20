@@ -15,6 +15,7 @@ from frappe.cache_manager import (
 	build_table_count_cache,
 )
 from kard_theme.kard_theme.doctype.kard_desktop_icon.kard_desktop_icon import get_desktop_icons,clear_desktop_icons_cache
+from kard_theme.kard_theme.doctype.kard_pinned_entry.kard_pinned_entry import get_pinned_icons,clear_pinned_icons_cache
 
 class KardThemeSettings(Document):
 	@frappe.whitelist()	
@@ -54,7 +55,7 @@ def get(module=None,workspace=None, build=False):
 		add_custom_links(data, workspace, True)
 		add_workspace_custom_links(data, workspace)
 		
-	
+
 	data = combine_common_sections(data)
 	data = apply_permissions(data)
 	data = check_pinned(data)
@@ -87,7 +88,6 @@ def get(module=None,workspace=None, build=False):
 		for section in data:
 			for item in section["items"]:
 				# Onboarding
-
 				# First disable based on exists of depends_on list
 				doctype = item.get("doctype")
 				dependencies = item.get("dependencies") or None
@@ -102,10 +102,10 @@ def get(module=None,workspace=None, build=False):
 
 				if item.get("onboard"):
 					# Mark Spotlights for initial
-					if item.get("type") == "doctype":
+					type = item.get("type").lower()
+					if type == "doctype":
 						name = item.get("name")
 						count = doctype_contains_a_record(name)
-
 						item["count"] = count
 	
 	out = {
@@ -116,28 +116,20 @@ def get(module=None,workspace=None, build=False):
 	
 def check_pinned(data):
 	user = frappe.session.user
-	
-	# pinned = frappe.db.get_all('Kard Pinned Entry',
-				# fields=['name'], filters= {'owner': user})
-			
-
+	pinned = get_pinned_icons(user).get("user_icons")
 	for s in data:
-		for d in s['items']:
-			favorite = 0
-			favorites = []
-			link = d.get('link') or ''
-			type = get_type_from_string(d.type)
-			favorites = frappe.db.get_all('Kard Pinned Entry',
-						fields=['name'], filters= {"link_to": d.name,'type':type,'owner': user})
-						
-			if favorites:
-				favorite = 1
-			
-			d["favorite"] = favorite
+		for item in s['items']:
+			name = item.name
+			item_type = item.type
+		
+			# Check if there is a matching entry in icons
+			matching_icon = next((icon for icon in pinned if icon.link_to == name and icon.type == item_type), None)
+
+			# Set the 'favorite' key based on whether a matching entry was found
+			item["favorite"] = 1 if matching_icon else 0
 			
 		# Sort the list using the custom key function
 		s['items']  = sorted(s['items'], key=custom_sort_key)
-				
 	return data
 	
 def get_type_from_string(type):
@@ -164,7 +156,7 @@ def custom_sort_key(item):
     # Then, sort alphabetically by 'label'
     return (-item["favorite"], item["label"])
 	
-def add_section(data, label, icon, items,color="#7f8c8d",shown_in="module_view"):
+def add_section(data, label, icon, items, color="#7f8c8d",shown_in="module_view"):
 	"""Adds a section to the module data."""
 	if not items: return
 	data.append({
@@ -179,7 +171,7 @@ def get_doctype_info(module):
 	"""Returns list of non child DocTypes for given module."""
 	active_domains = frappe.get_active_domains()
 	
-	doctype_fields = ["'doctype' as type", "name", "description", "document_type",
+	doctype_fields = ["'DocType' as type", "name", "description", "document_type",
 		"custom", "issingle","beta","icon","name as label"]
 
 	doctype_info = frappe.get_all("DocType", filters={
@@ -190,8 +182,12 @@ def get_doctype_info(module):
 		"restrict_to_domain": ("in", active_domains)
 	}, fields=doctype_fields, order_by="custom asc, document_type desc, name asc")
 		
-	page_fields = ["'page' as type", "name","title as label","icon"]
+	page_fields = ["'Page' as type", "name","title as label","icon"]
 	page_meta = frappe.get_meta("Page")	
+	# for field in ['description','document_type','custom','beta']:
+		# if page_meta.has_field(field):
+			# page_fields += field
+			
 	if page_meta.has_field('description'):
 		page_fields += ["description"]
 	if page_meta.has_field('document_type'):
@@ -200,7 +196,6 @@ def get_doctype_info(module):
 		page_fields += ["custom"]
 	if page_meta.has_field('beta'):
 		page_fields += ["beta"]
-	
 		
 	doctype_info += frappe.get_all("Page", filters={
 		"module": module
@@ -210,13 +205,19 @@ def get_doctype_info(module):
 	}, fields=page_fields)
 
 
+	dashboard_fields = ["'Dashboard' as type","name","dashboard_name as label","'Dashboard' as document_type"]
+	doctype_info += frappe.get_all("Dashboard", filters={
+		"module": module
+	}, fields=dashboard_fields)
+
 	for d in doctype_info:
-		d.document_type = d.document_type or ""
-		d.description = _(d.description or "")
-		d.label = d.label or d.name
+		d['document_type'] = d.get('document_type') or ""
+		d['description'] = _(d.get('description') or "")
+		d['label'] = _(d.label or d.name)
 		d["icon"] = ""
-		d["doc_view"] = "List"
+		d["doc_view"] = "List" if d.type == 'DocType' else ''
 		d["link_to"] = d.name
+		
 	return doctype_info
 		
 def add_custom_doctypes(data,module):
@@ -256,8 +257,8 @@ def add_custom_report_list(data,module):
 			global_favorite = 1
 
 		out.append({
-			"type": "report",
-			"doctype": r.ref_doctype,
+			"type": "Report",
+			"ref_doctype": r.ref_doctype,
 			"is_query_report": 1 if r.report_type in ("Query Report", "Script Report", "Custom Report") else 0,
 			"label": _(r.name),
 			"name": r.name,
@@ -320,12 +321,12 @@ def add_workspace_custom_links(data,workspace):
 			
 			add_section(data, _('Reports'),section_icon,[
 			{
-				"type": type,
-				"doctype": r.ref_doctype,
+				"type": link.type,
+				"ref_doctype": r.ref_doctype,
 				"is_query_report": 1 if r.report_type in ("Query Report", "Script Report", "Custom Report") else 0,
 				"name": name,
 				"label": _(link.label),
-				"link": link.url,
+				"url": link.url,
 				"icon": link.icon,
 				"favorite": favorite,
 				"global_favorite": global_favorite,
@@ -336,7 +337,7 @@ def add_workspace_custom_links(data,workspace):
 			
 		add_section(data, _('Document'),section_icon,[
 		{
-			"type": type,
+			"type": link.type,
 			"name": name,
 			"icon": link.icon,
 			"label": _(link.label),
@@ -391,12 +392,12 @@ def add_custom_links(data,module,is_workspace=False):
 			
 			add_section(data, _('Reports'),link.icon,[
 			{
-				"type": type,
 				"doctype": r.ref_doctype,
+				"type": link.type,
 				"is_query_report": 1 if r.report_type in ("Query Report", "Script Report", "Custom Report") else 0,
 				"name": name,
 				"label": _(link.label),
-				"link": link.url,
+				"url": link.url,
 				"icon": link.icon,
 				"favorite": favorite,
 				"global_favorite": global_favorite,
@@ -405,11 +406,11 @@ def add_custom_links(data,module,is_workspace=False):
 		
 		add_section(data, _(link.section),link.icon,[
 		{
-			"type": type,
+			"type": link.type,
 			"name": name,
 			"icon": link.icon,
 			"label": _(link.label),
-			"link": link.link,
+			"url": link.url,
 			"doc_view": link.doc_view,
 		}],link.color,"module_view")
 		
@@ -442,15 +443,17 @@ def apply_permissions(data):
 		for item in section.get("items") or []:
 			item = frappe._dict(item)
 
-			if item.country and item.country != default_country:
-				continue
-
+			# if item.country and item.country != default_country:
+				# continue
+			type = item.get("type").lower()
+			
 			if (
-				(item.type == "doctype" and item.name in user.can_read)
-				or (item.type == "page" and item.name in allowed_pages)
-				or (item.type == "report" and item.name in allowed_reports)
+				(type == "doctype" and item.name in user.can_read)
+				or (type == "page" and item.name in allowed_pages)
+				or (type == "report" and item.name in allowed_reports)
+				or type == "url"
+				or (type == "dashboard" and "Dashboard" in user.can_read)
 			):
-
 				new_items.append(item)
 
 		if new_items:

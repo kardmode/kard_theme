@@ -1,9 +1,12 @@
 # Copyright (c) 2023, kardmode and contributors
 # For license information, please see license.txt
-
 import frappe
+from frappe import _
+import json
 from frappe.model.document import Document
 from frappe.boot import get_allowed_pages, get_allowed_reports
+from six import iteritems, string_types
+from kard_theme.kard_theme.doctype.kard_desktop_icon.kard_desktop_icon import is_icon_blocked
 
 class KardPinnedEntry(Document):
 	def on_trash(self):
@@ -27,11 +30,11 @@ def get_pinned_icons(user=None):
 		
 		set_cache = True
 		
-		fields = ['name','reference','hidden', 'label', 'link', 'type', 'icon', 'color', 'description', 'category',
-				'_doctype','idx','blocked']
+		fields = ['name','link_to','hidden', 'label', 'url', 'type', 'icon', 'color', 'category',
+				'blocked']
 		
 		user_icons = frappe.db.get_all('Kard Pinned Entry', fields=fields,
-			filters={'standard': 0, 'owner': user})
+			filters={'owner': user})
 
 		active_domains = frappe.get_active_domains()
 
@@ -59,6 +62,15 @@ def get_pinned_icons(user=None):
 			if is_icon_blocked(icon,blocked_modules,blocked_doctypes,allowed_pages,allowed_reports):
 				icon.hidden = 1
 				icon.blocked = icon.hidden
+				
+			if icon.blocked == 0:
+				if icon.type == 'Report':
+					report_fields = ["report_type", "ref_doctype"]	
+					r = frappe.db.get_value("Report", icon.link_to, report_fields,as_dict=True)
+					if r:
+						icon["ref_doctype"] = r.ref_doctype
+						icon["is_query_report"]: 1 if r.report_type in ("Query Report", "Script Report", "Custom Report") else 0
+
 
 			if icon.get('category') == '' or icon.get('category') == None:
 				icon.category = "Uncategorized"
@@ -91,35 +103,23 @@ def get_pinned_icons(user=None):
 		
 	return all_icons
 
-def is_icon_blocked(icon,blocked_modules,blocked_doctypes,allowed_pages,allowed_reports):
-	if ((icon.type == "Module" and icon.reference in blocked_modules)
-		or (icon.type == "DocType" and icon.reference in blocked_doctypes)
-		or (icon.type == "Page" and icon.reference not in allowed_pages)
-		or (icon.type == "Report" and icon.reference not in allowed_reports)
-	):
-		return True
-	
-	return False
 	
 @frappe.whitelist()
 def pin_user_icon(args=None):
 	import json
 	args = json.loads(args)
-	reference = args.get("reference")
+	link_to = args.get("link_to")
 	workspace = args.get("workspace")
-	link_to = reference
 	doc_view = args.get("doc_view")
-	_doctype = args.get("doctype")
-	_report = args.get("report")
 	label = args.get("label")
-	link = args.get("link")
+	url = args.get("url")
 	type = args.get("type")
 	icon = args.get("icon")
 	color = args.get("color")
 	remove = args.get("remove")
 	standard = 0
 
-	icon_name = frappe.db.exists('Kard Pinned Entry', {'reference': reference,
+	icon_name = frappe.db.exists('Kard Pinned Entry', {'link_to': link_to,
 		'owner': frappe.session.user,'type':type,'doc_view':doc_view})
 	
 	if icon_name:
@@ -137,17 +137,16 @@ def pin_user_icon(args=None):
 			frappe.db.set_value('Kard Pinned Entry', icon_name, 'color', color)
 	
 	elif remove == '0' or remove  == 0:
-		if not label: label = reference
+		if not label: label = link_to
 
 		idx = frappe.db.sql('select max(idx) from `tabKard Pinned Entry` where owner=%s',
 			frappe.session.user)[0][0] or 0
 			
 		userdefined_icon = None
-		if _report:
-			userdefined_icon = frappe.db.get_value('Report', _report, ['module'], as_dict=True)
-		elif _doctype:
-			userdefined_icon = frappe.db.get_value('DocType', _doctype, ['module'], as_dict=True)
-			_report = None
+		if type =="Report":
+			userdefined_icon = frappe.db.get_value('Report', link_to, ['module'], as_dict=True)
+		elif type =="DocType":
+			userdefined_icon = frappe.db.get_value('DocType', link_to, ['module'], as_dict=True)
 
 		fields = ["icon"]
 		order_by = "name"
@@ -172,20 +171,14 @@ def pin_user_icon(args=None):
 				'doctype': 'Kard Pinned Entry',
 				'label': label,
 				'workspace': workspace,
-				'module_name': reference,
-				'link': link,
+				'url': url,
 				'type': type,
 				'link_to': link_to,
 				'doc_view': doc_view,
-				'_doctype': _doctype,
-				'_report': _report,
 				'icon': module_icon.icon,
 				'color': module_icon.color,
 				'reverse': module_icon.reverse,
-				'idx': idx + 1,
-				'custom': 1,
-				'standard': standard,
-				'reference':reference
+				'idx': idx + 1
 			}).insert(ignore_permissions=True)
 			clear_pinned_icons_cache()
 			icon_name = new_icon.name
