@@ -24,8 +24,9 @@ Frappe v11 used a doctype called `Desktop Icon` to store user shortcuts, their o
 This theme stores bookmark info in a custom doctype called `Kard Desktop Icon`.
 
 Icon information such as icon/color/label can be added when bookmarking/pinning or can be taken from the module/workspace.
-	* Added a custom field to workspace for color information.
-	* When a bookmark/pin is added without any color or icon user input it finds the module for the doctype/report and then finds the workspace that represents that module. 
+
+* Added a custom field to workspace for color information.
+* When a bookmark/pin is added without any color or icon user input it finds the module for the doctype/report and then finds the workspace that represents that module. 
 
 ## Installation
 
