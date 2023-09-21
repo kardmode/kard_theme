@@ -975,7 +975,6 @@ $.extend(frappe.desktop, {
 
 		wrapper.on("click", ".kt-app-icon, .kt-app-icon-svg", function() {
 			if ( !frappe.desktop.wiggling ) {
-				
 				frappe.desktop.open_module($(this).parent());
 			}
 		});
