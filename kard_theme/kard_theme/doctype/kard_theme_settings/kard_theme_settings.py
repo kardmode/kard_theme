@@ -125,30 +125,15 @@ def check_pinned(data):
 			# Check if there is a matching entry in icons
 			matching_icon = next((icon for icon in pinned if icon.link_to == name and icon.type == item_type), None)
 
-			# Set the 'favorite' key based on whether a matching entry was found
-			item["favorite"] = 1 if matching_icon else 0
+			if matching_icon:
+				item["favorite"] = 1
+				item.label = _(matching_icon.label)
+			else:
+				item["favorite"] = 0
 			
 		# Sort the list using the custom key function
 		s['items']  = sorted(s['items'], key=custom_sort_key)
 	return data
-	
-def get_type_from_string(type):
-	# Array of strings (not necessarily lowercase)
-	string_array = ["DocType", "Report", "Page", "Dashboard","URL"]
-
-	# Convert the search string to lowercase
-	search_string_lower = type.lower()
-
-	# Initialize a variable to store the found string (if any)
-	found_string = None
-
-	# Iterate through the array and check for a match (case-insensitive)
-	for string in string_array:
-		if search_string_lower == string.lower():
-			found_string = string
-			break  # Stop searching once a match is found
-	
-	return found_string
 	
 # Custom sorting key function
 def custom_sort_key(item):

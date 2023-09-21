@@ -23,40 +23,32 @@ def get_pinned_icons(user=None):
 
 	all_icons = frappe.cache().hget('pinned_icons', user)
 	set_cache = False
-		
+
 	if not all_icons:
 		all_icons = {}
 		all_icons["user_icons"] = []
 		
 		set_cache = True
 		
-		fields = ['name','link_to','hidden', 'label', 'url', 'type', 'icon', 'color', 'category',
-				'blocked']
-		
+		fields = ['name','link_to','hidden', 'label', 'url', 'type', 'icon', 'color', 'category','blocked']
 		user_icons = frappe.db.get_all('Kard Pinned Entry', fields=fields,
 			filters={'owner': user})
 
 		active_domains = frappe.get_active_domains()
-
 		blocked_doctypes = frappe.get_all("DocType", filters={
 			"ifnull(restrict_to_domain, '')": ("not in", ",".join(active_domains))
 		}, fields=["name"])
-
 		blocked_doctypes = [ d.get("name") for d in blocked_doctypes ]
-
 		domain_blocked_modules	= frappe.get_all("Module Def", filters={
 			"ifnull(restrict_to_domain, '')": ("not in", ",".join(active_domains))
 		}, fields=["name"])
-
 		domain_blocked_modules = [ d.get("name") for d in domain_blocked_modules ]
-		
 		user_blocked_modules = frappe.get_doc('User', user).get_blocked_modules()
 		blocked_modules = domain_blocked_modules + user_blocked_modules
-		
 		allowed_pages = get_allowed_pages()
 		allowed_reports = get_allowed_reports()
 		
-		from kard_theme.kard_theme.doctype.kard_theme_settings.kard_theme_settings import get
+		# from kard_theme.kard_theme.doctype.kard_theme_settings.kard_theme_settings import get
 
 		for icon in user_icons:
 			if is_icon_blocked(icon,blocked_modules,blocked_doctypes,allowed_pages,allowed_reports):
@@ -74,6 +66,8 @@ def get_pinned_icons(user=None):
 
 			if icon.get('category') == '' or icon.get('category') == None:
 				icon.category = "Uncategorized"
+				
+			frappe.errprint(icon.label)
 				
 			# translate
 			if icon.label: icon.label = _(icon.label)
@@ -125,16 +119,18 @@ def pin_user_icon(args=None):
 	if icon_name:
 		if remove == '1' or remove == 1:
 			frappe.delete_doc("Kard Pinned Entry", icon_name, ignore_permissions=True)
-			return icon_name
-	
-		if label:
-			frappe.db.set_value('Kard Pinned Entry', icon_name, 'label', label)
-	
-		if icon:
-			frappe.db.set_value('Kard Pinned Entry', icon_name, 'icon', icon)
+		else:
+			
+			if label:
+				frappe.db.set_value('Kard Pinned Entry', icon_name, 'label', label)
+		
+			if icon:
+				frappe.db.set_value('Kard Pinned Entry', icon_name, 'icon', icon)
 
-		if color:
-			frappe.db.set_value('Kard Pinned Entry', icon_name, 'color', color)
+			if color:
+				frappe.db.set_value('Kard Pinned Entry', icon_name, 'color', color)
+				
+		clear_pinned_icons_cache()
 	
 	elif remove == '0' or remove  == 0:
 		if not label: label = link_to

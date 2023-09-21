@@ -166,17 +166,17 @@ def add_user_icon(args=None):
 	if icon_name:
 		if remove == '1' or remove == 1:
 			frappe.delete_doc("Kard Desktop Icon", icon_name, ignore_permissions=True)
-			return icon_name
-	
-		if label:
-			frappe.db.set_value('Kard Desktop Icon', icon_name, 'label', label)
-	
-		if icon:
-			frappe.db.set_value('Kard Desktop Icon', icon_name, 'icon', icon)
+		else:
+		
+			if label:
+				frappe.db.set_value('Kard Desktop Icon', icon_name, 'label', label)
+		
+			if icon:
+				frappe.db.set_value('Kard Desktop Icon', icon_name, 'icon', icon)
 
-		if color:
-			frappe.db.set_value('Kard Desktop Icon', icon_name, 'color', color)
-	
+			if color:
+				frappe.db.set_value('Kard Desktop Icon', icon_name, 'color', color)
+		
 		clear_desktop_icons_cache()
 
 	elif remove == '0' or remove  == 0:

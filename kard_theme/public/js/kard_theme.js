@@ -421,8 +421,9 @@ $.extend(frappe.desktop, {
 					var aElement = document.createElement('a');
 					aElement.href = '/app/' + frappe.desktop.get_route_for_menu_links(entry);
 					let label = entry.label;
-					if (entry.type == "Dashboard")
-						label = entry.label + " Dashboard"; 
+					aElement.title = label + ' ' + entry.type;
+					//if (entry.type == "Dashboard")
+						//label = entry.label + " Dashboard"; 
 					aElement.textContent = label;
 					if(entry.hasOwnProperty('global_favorite') && entry.global_favorite == 1)
 					{
@@ -464,8 +465,10 @@ $.extend(frappe.desktop, {
 					aElement.href = '/app/' + frappe.desktop.get_route_for_menu_links(entry);
 					
 					let label = entry.label;
-					if (entry.type == "Dashboard")
-						label = entry.label + " Dashboard"; 
+					aElement.title = label + ' ' + entry.type;
+
+					//if (entry.type == "Dashboard")
+					//	label = entry.label + " Dashboard"; 
 					aElement.textContent = label;
 
 					listItem.appendChild(aElement);
@@ -765,7 +768,7 @@ $.extend(frappe.desktop, {
 			
 			let label = m.label;
 			
-			let label_wrapper = '<div class="kt-case-wrapper" title="'+label+'" data-id="'+m.name+'" data-name="'+m.link_to+'" data-link="'+m.route+'">'
+			let label_wrapper = '<div class="kt-case-wrapper" title="'+label+' '+ m.type +'" data-id="'+m.name+'" data-name="'+m.link_to+'" data-link="'+m.route+'">'
 			+ '<div class="kt-app-icon" style="background-color:'+ color +'">'+ icon_el
 			+ '<div class="circle module-notis hide" data-doctype="'+m.link_to+'"><span class="circle-text"></span></div>'
 			+ '<div class="circle module-remove hide"><div class="circle-text"><b>&times</b></div></div>'
@@ -1312,8 +1315,7 @@ $.extend(frappe.desktop, {
 				{
 					label: __('Label'),
 					fieldname: 'label',
-					fieldtype: 'Data',
-					default:args['label']
+					fieldtype: 'Data'
 				},
 				{
 					label: __('Icon'),
@@ -1361,8 +1363,7 @@ $.extend(frappe.desktop, {
 				{
 					label: __('Label'),
 					fieldname: 'label',
-					fieldtype: 'Data',
-					default:args['label']
+					fieldtype: 'Data'
 				},
 				{
 					label: __('Icon'),
