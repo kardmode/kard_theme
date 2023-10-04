@@ -241,18 +241,14 @@ $.extend(frappe.desktop, {
 			if (!frappe.desktop.current_workspace || frappe.desktop.current_workspace != route[1])
 			{
 				let workspace = frappe.desktop.current_workspace = route[1];
-				let module = route[1];
+				let module = null;
 				
-				var matchingItem = frappe.boot.allowed_workspaces.find(item => item.name === route[1]);
+				let matchingItem = frappe.boot.allowed_workspaces.find(item => item.name === route[1]);
 
 				if (matchingItem) {
-					let new_module = matchingItem.module;
-					if(new_module)
-					{
-						module = new_module;
-					}
+					module = matchingItem.module;
 				}
-										``
+
 				var docs = [];
 				var reports = [];
 				frappe.call({
@@ -600,7 +596,7 @@ $.extend(frappe.desktop, {
 		setTimeout(() => { 
 			route = frappe.get_route();
 
-			if(!route || (route[0] == "Workspaces"&& route[1] == "private")){
+			if(!route || (route[0] == "Workspaces"&& route[1] == "private" && !route[2])){
 				frappe.set_route("desk");
 				return;
 			}

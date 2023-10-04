@@ -1,0 +1,35 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"GeDXgN47Wm\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Kard Theme</span>\",\"col\":12}}]",
+ "creation": "2023-09-27 03:58:27.676608",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "idx": 0,
+ "is_hidden": 0,
+ "kard_menu": [],
+ "label": "Kard Theme",
+ "links": [],
+ "modified": "2023-09-27 04:35:42.949251",
+ "modified_by": "Administrator",
+ "module": "Kard Theme",
+ "name": "Kard Theme",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Workspace Manager"
+  }
+ ],
+ "sequence_id": 23.0,
+ "shortcuts": [],
+ "title": "Kard Theme"
+}
