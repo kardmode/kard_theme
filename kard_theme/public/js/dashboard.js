@@ -1,3 +1,3 @@
 frappe.pages["dashboard"].on_page_load = function (wrapper) {
-	console.log("test");
+	// console.log("test");
 };

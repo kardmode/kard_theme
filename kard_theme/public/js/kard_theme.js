@@ -5,7 +5,6 @@ $(window).on('hashchange', function() {
 });
  
 $(document).ready(function() {
-	// console.log("kard theme ready");
 	const targetElement = document.body;
 	const observer = new MutationObserver(function(mutationsList, observer) {
 		for (const mutation of mutationsList) {
@@ -32,9 +31,25 @@ $(document).ajaxComplete(function() {
 });
 
 $.extend(frappe.desktop, {
+	update_frappe_sidebar_button: function()
+	{
+		let route = frappe.get_route()
+		if(!route){
+			return;
+		}
+
+		if(route[0] == "Workspaces")
+		{
+			let wrapper = document.getElementById('page-Workspaces');
+			let sidebar_toggle = $(wrapper).find(".sidebar-toggle-btn");
+			sidebar_toggle.hide();
+		}
+	},
+	
 	initializeGlobalSidebar: function() {
 			if(!frappe.boot.kard_settings.enable_theme)
-				return;		
+				return;
+			
 			function addButton() {
 				var existingSpan = document.getElementById('globalmenu');
 				
@@ -91,7 +106,7 @@ $.extend(frappe.desktop, {
 				}
 				$(document.body).trigger("toggleSidebar");
 				
-				let sidebar_toggle = $(wrapper).find(".sidebar-toggle-btn");
+				let sidebar_toggle = $(wrapper).find(".sidebar-toggle-btn");				
 				let sidebar_toggle_icon = sidebar_toggle.find(".sidebar-toggle-icon");
 				let is_sidebar_visible = $(sidebar_wrapper).is(":visible");
 				sidebar_toggle_icon.html(
@@ -100,9 +115,8 @@ $.extend(frappe.desktop, {
 				
 			}
 			
-			function openSidebar() {
-				
-				
+			function openSidebar() 
+			{	
 				let route = frappe.get_route()
 				if(!route){
 					return;
@@ -211,7 +225,7 @@ $.extend(frappe.desktop, {
 			if(settings.enable_module_sidebar)
 			{
 				addButton();
-			
+
 				 // Event delegation for closing sidebar when any link is clicked
 				document.body.addEventListener('click', function(event) {
 					var sidebar = document.getElementById('global-sidebar');
@@ -323,7 +337,6 @@ $.extend(frappe.desktop, {
 			return;
 		}
 		
-		
 		let docsButton = document.querySelector('.docs-button');
 		let reportsButton = document.querySelector('.reports-button');
 		
@@ -390,7 +403,7 @@ $.extend(frappe.desktop, {
 		let entries = items; // Sample array of entries
 		let sidebar = document.getElementById('workspace-sidebar');
 		let overlay = document.querySelector('.workspace-overlay');
-		  
+
 		if (!sidebar) {
 			  sidebar = document.createElement('div');
 			  sidebar.id = 'workspace-sidebar';
@@ -422,9 +435,11 @@ $.extend(frappe.desktop, {
 					aElement.href = '/app/' + frappe.desktop.get_route_for_menu_links(entry);
 					let label = entry.label;
 					aElement.title = label + ' ' + entry.type;
-					//if (entry.type == "Dashboard")
-						//label = entry.label + " Dashboard"; 
-					aElement.textContent = label;
+					
+					if (entry.type == "Dashboard")
+						label = entry.label + " Dashboard"; 
+					
+					
 					if(entry.hasOwnProperty('global_favorite') && entry.global_favorite == 1)
 					{
 						let spanElement = document.createElement('span');
@@ -448,6 +463,7 @@ $.extend(frappe.desktop, {
 
 					}
 					
+					aElement.textContent = label;
 					listItem.appendChild(aElement);
 					sidebarList.appendChild(listItem);
 				});
@@ -467,10 +483,10 @@ $.extend(frappe.desktop, {
 					let label = entry.label;
 					aElement.title = label + ' ' + entry.type;
 
-					//if (entry.type == "Dashboard")
-					//	label = entry.label + " Dashboard"; 
+					if (entry.type == "Dashboard")
+						label = entry.label + " Dashboard"; 
+					
 					aElement.textContent = label;
-
 					listItem.appendChild(aElement);
 					sidebarList.appendChild(listItem);
 				});
@@ -606,6 +622,7 @@ $.extend(frappe.desktop, {
 			}
 			else
 			{
+				// frappe.desktop.update_frappe_sidebar_button();
 				frappe.desktop.get_workspace_data();
 				frappe.desktop.add_workspace_buttons();
 				frappe.desktop.load_shortcuts();
