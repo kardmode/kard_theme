@@ -5,7 +5,7 @@
 	width: 300px;
 	padding: 15px; /* Add padding around the entire sidebar */
 	height: 100%;
-	background-color: #f4f4f4; /* Light background color */
+	background-color: #fff; /* Light background color */
 	transition: right 0.1s ease-in-out;
 	z-index: 2001; /* Above overlay */
 }
@@ -93,7 +93,7 @@
 	width: 300px;
 	padding: 10px; /* Add padding around the entire sidebar */
 	height: 100%;
-	background-color: #f4f4f4; /* Light background color */
+	background-color: #fff; /* Light background color */
 	transition: left 0.1s ease-in-out;
 	z-index: 2001; /* Above overlay */
 	    overflow-y: auto; /* Add scroll when content overflows */

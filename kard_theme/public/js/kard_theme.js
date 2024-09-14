@@ -439,6 +439,9 @@ $.extend(frappe.desktop, {
 					if (entry.type == "Dashboard")
 						label = entry.label + " Dashboard"; 
 					
+					 // Append the label as text node first
+					const textNode = document.createTextNode(label);
+					aElement.appendChild(textNode);
 					
 					if(entry.hasOwnProperty('global_favorite') && entry.global_favorite == 1)
 					{
@@ -455,15 +458,13 @@ $.extend(frappe.desktop, {
 					{
 						let spanElement = document.createElement('span');
 						spanElement.innerHTML = `
-							<svg class="liked icon icon-md">
+							<svg class="liked icon  icon-md" style="">
 								<use class="like-icon" href="#icon-heart"></use>
 							</svg>
 						`;
-						aElement.appendChild(spanElement);
-
+							aElement.appendChild(spanElement);
 					}
 					
-					aElement.textContent = label;
 					listItem.appendChild(aElement);
 					sidebarList.appendChild(listItem);
 				});

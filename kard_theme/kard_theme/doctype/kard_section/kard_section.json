@@ -5,6 +5,7 @@
  "beta": 1,
  "creation": "2019-02-04 23:25:49.623833",
  "doctype": "DocType",
+ "document_type": "Setup",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
@@ -39,7 +40,7 @@
   }
  ],
  "links": [],
- "modified": "2023-09-19 06:10:39.697984",
+ "modified": "2024-09-07 02:39:33.254010",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Kard Section",

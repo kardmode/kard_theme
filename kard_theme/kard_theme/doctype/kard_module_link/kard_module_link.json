@@ -3,6 +3,7 @@
  "beta": 1,
  "creation": "2017-11-08 02:33:14.770339",
  "doctype": "DocType",
+ "document_type": "Setup",
  "engine": "InnoDB",
  "field_order": [
   "workspace",
@@ -101,7 +102,7 @@
   }
  ],
  "links": [],
- "modified": "2023-09-19 06:56:51.213731",
+ "modified": "2024-09-07 02:39:37.261756",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Kard Module Link",
