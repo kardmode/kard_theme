@@ -1,56 +1,79 @@
 frappe.provide('frappe.desktop');
 
 $(window).on('hashchange', function() {
-	// console.log("kard theme hashchange");	
+	// Reserved for future use or debugging
 });
- 
+
+$(document).ajaxComplete(function() {
+	// Reserved for future use or debugging
+});
+
 $(document).ready(function() {
 	const targetElement = document.body;
-	const observer = new MutationObserver(function(mutationsList, observer) {
+	// Observe attribute changes for route change
+	const observer = new MutationObserver(function(mutationsList) {
 		for (const mutation of mutationsList) {
-		  if (mutation.type === 'attributes' && mutation.attributeName === 'data-route') {
-            const newValue = targetElement.getAttribute('data-route');
-			frappe.desktop.refresh();
-		  }
+			if (mutation.type === 'attributes' && mutation.attributeName === 'data-route') {
+				frappe.desktop.refresh();
+			}
 		}
 	});
 
-	const config = {
-	attributes: true // Observe attribute changes
-	};
-
-	observer.observe(targetElement, config);
-	
-	frappe.desktop.initializeGlobalSidebar();
+	observer.observe(targetElement, { attributes: true });
 	frappe.desktop.refresh();
+	frappe.desktop.initializeGlobalSidebar();
 });
 
-$(document).ajaxComplete(function() {	
-	// console.log("kard theme ajaxComplete");
-	// var ajax_state = $('body').attr('data-ajax-state');
-});
+
 
 $.extend(frappe.desktop, {
-	update_frappe_sidebar_button: function()
-	{
-		let route = frappe.get_route()
-		if(!route){
+	refresh: function() {
+		if (!(frappe.session && frappe.session.user && frappe.session.user !== 'Guest'))
+		{
+			console.warn("User is not logged in. Skipping frappe.desktop.refresh()");
 			return;
 		}
+		
+		if(!frappe.boot.kard_settings.enable_theme) 
+			return;
+		frappe.desktop.update_frappe_sidebar_button();
 
-		if(route[0] == "Workspaces")
+		setTimeout(() => {
+			
+			if (!(frappe.session && frappe.session.user && frappe.session.user !== 'Guest'))
+			{
+				console.warn("User is not logged in. Skipping frappe.desktop.refresh()");
+				return;
+			}
+			
+			let route = frappe.get_route();
+
+			if(!route || (route[0] == "Workspaces"&& route[1] == "private")){
+				frappe.set_route("desk");
+				return;
+			}
+			else
+			{
+				frappe.desktop.get_workspace_data();
+				frappe.desktop.check_workspace_btns();
+				frappe.desktop.load_shortcuts();
+				frappe.desktop.add_bookmark_link();
+			}
+		}, 2000);
+	},
+	
+	update_frappe_sidebar_button: function(){
+		let wrapper = document.getElementById('page-Workspaces');
+		if(wrapper)
 		{
-			let wrapper = document.getElementById('page-Workspaces');
 			let sidebar_toggle = $(wrapper).find(".sidebar-toggle-btn");
-			sidebar_toggle.hide();
+			if (sidebar_toggle)
+				sidebar_toggle.hide();
 		}
 	},
 	
-	initializeGlobalSidebar: function() {
-			if(!frappe.boot.kard_settings.enable_theme)
-				return;
-			
-			function addButton() {
+	initializeGlobalSidebar: function() {			
+			function addGlobalSidebarButton() {
 				var existingSpan = document.getElementById('globalmenu');
 				
 				if (!existingSpan) {
@@ -62,11 +85,10 @@ $.extend(frappe.desktop, {
 					navbarBrand.parentNode.insertBefore(globalMenuSpan, navbarBrand);
 
 					var svgIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-					// svgIcon.setAttribute('class', 'icon icon-menu');
 					svgIcon.setAttribute('viewBox', '0 0 24 24');
 					
 					var useElement = document.createElementNS("http://www.w3.org/2000/svg", "use");
-					useElement.setAttribute('href', '#icon-menu');
+					useElement.setAttribute('href', '#icon-list');
 					
 					svgIcon.appendChild(useElement);
 					globalMenuSpan.appendChild(svgIcon);
@@ -97,6 +119,8 @@ $.extend(frappe.desktop, {
 								.removeClass("opened")
 								.find(".dropdown-toggle")
 								.removeClass("text-muted");
+							sidebar_wrapper.find("div.close-sidebar").remove();
+
 						});
 					};
 					
@@ -105,19 +129,10 @@ $.extend(frappe.desktop, {
 					sidebar_wrapper.toggle();
 				}
 				$(document.body).trigger("toggleSidebar");
-				
-				let sidebar_toggle = $(wrapper).find(".sidebar-toggle-btn");				
-				let sidebar_toggle_icon = sidebar_toggle.find(".sidebar-toggle-icon");
-				let is_sidebar_visible = $(sidebar_wrapper).is(":visible");
-				sidebar_toggle_icon.html(
-					frappe.utils.icon(is_sidebar_visible ? "sidebar-collapse" : "sidebar-expand", "md")
-				);
-				
 			}
 			
-			function openSidebar() 
-			{	
-				let route = frappe.get_route()
+			function openSidebar() {	
+				let route = frappe.get_route();
 				if(!route){
 					return;
 				}
@@ -141,19 +156,15 @@ $.extend(frappe.desktop, {
 					  sidebarContent.innerHTML = `
 						<ul id="global-sidebarList"></ul>
 					  `;
-
 					  sidebar.appendChild(sidebarContent);
-					  
 					  document.body.insertBefore(sidebar, document.querySelector('.main-section'));
-
-				  
 				}
 
 					
 				const sidebarList = sidebar.querySelector('#global-sidebarList');
 				sidebarList.innerHTML = ''; // Clear previous list items
 				
-					 // Loop through the dictionary and create <li> elements
+				 // Loop through the dictionary and create <li> elements
 				for (var key in entries) {
 						if (entries.hasOwnProperty(key)) {
 							if(entries[key].is_hidden != 1){
@@ -192,60 +203,53 @@ $.extend(frappe.desktop, {
 						}
 					}
 
-						
+			  
 
-				  sidebar.classList.toggle('opened');
-
-				  if (!overlay) {
-					overlay = document.createElement('div');
-					overlay.className = 'workspace-overlay';
-					document.body.appendChild(overlay);
-
-					overlay.addEventListener('click', () => {
-					  sidebar.classList.remove('opened');
-					  overlay.style.display = 'none';
-					});
-				  }
-				  
-				  overlay.style.display = 'block';
+			  if (!overlay) {
+				overlay = document.createElement('div');
+				overlay.className = 'workspace-overlay';
+				document.body.appendChild(overlay);
+			  }
+				// Animate in on the next frame
+				requestAnimationFrame(() => {
+					sidebar.classList.add('opened');
+					overlay.classList.add('opened');
+				});
 			}
-			
+				
 			function closeSidebar() {
-				var sidebar = document.getElementById('global-sidebar');
-				var overlay = document.querySelector('.workspace-overlay');
+				let sidebar = document.getElementById('global-sidebar');
+				let overlay = document.querySelector('.workspace-overlay');
 				if (sidebar) {
 					sidebar.classList.remove('opened');
 				}
 				if (overlay) {
-					 overlay.style.display = 'none';
+					overlay.classList.remove('opened');
 				}
 			}
-			
-			let settings = frappe.boot.kard_settings;
-			if(settings.enable_module_sidebar)
-			{
-				addButton();
 
-				 // Event delegation for closing sidebar when any link is clicked
-				document.body.addEventListener('click', function(event) {
-					var sidebar = document.getElementById('global-sidebar');
-					var overlay = document.querySelector('.workspace-overlay');
-					if (sidebar && event.target.closest('#global-sidebar')) {
-						closeSidebar();
-					}
-					if (overlay && event.target.closest('.workspace-overlay')) {
-						closeSidebar();
-					}
-				});
-				
-			}
-			
-			
-		},	
+		if(!frappe.boot.kard_settings.enable_theme) 
+			return;
+
+		if(frappe.boot.kard_settings.enable_module_sidebar === 1){
+			addGlobalSidebarButton();
+			 // Event delegation for closing sidebar when any link is clicked
+			document.body.addEventListener('click', function(event) {
+				var sidebar = document.getElementById('global-sidebar');
+				var overlay = document.querySelector('.workspace-overlay');
+				if (sidebar && event.target.closest('#global-sidebar')) {
+					closeSidebar();
+				}
+				if (overlay && event.target.closest('.workspace-overlay')) {
+					closeSidebar();
+				}
+			});
+		}
+	},
 	
 	get_workspace_data: function() {
 
-		let route = frappe.get_route()
+		let route = frappe.get_route();
 		if(!route){
 			return;
 		}
@@ -323,84 +327,100 @@ $.extend(frappe.desktop, {
 			}
 		}
 	},
-		
-	add_workspace_buttons: function() {
-		// console.log("check to add buttons");
-		let route = frappe.get_route()
+	
+	check_workspace_btns:function(){
+		let route = frappe.get_route();
 
 		if(!route){
 			return;
 		}
 		
-		if (!frappe.boot.kard_settings.enable_links_menus_in_workspace)
+		if(frappe.boot.kard_settings.check_workspace_btns)
 		{
-			return;
+			if(route[0] == "Workspaces")
+			{
+				let has_perm = frappe.model.can_write("Workspace");
+				const createButton = document.querySelector('button[data-label="Create%20Workspace"]');
+				const editButton = document.querySelector('button[data-label="Edit"]');
+				if(has_perm)
+				{
+					if(createButton)
+						createButton.classList.remove("hide");
+					if(editButton)
+						editButton.classList.remove("hide");
+				}
+				else
+				{
+					if(createButton)
+						createButton.classList.add("hide");
+					if(editButton)
+						editButton.classList.add("hide");
+				}
+			}
 		}
 		
-		let docsButton = document.querySelector('.docs-button');
-		let reportsButton = document.querySelector('.reports-button');
-		
-		if(docsButton)
-			docsButton.classList.add("hide");
-		
-		if(reportsButton)
-			reportsButton.classList.add("hide");
-			
-		if(route[0] == "Workspaces" && route[1])
+		if (frappe.boot.kard_settings.enable_links_menus_in_workspace)
 		{
-				// Check if the buttons have already been added
-				docsButton = document.querySelector('.docs-button');
-				reportsButton = document.querySelector('.reports-button');
-				// Find the div with class custom-actions
-				const customActionsDiv = document.querySelector('#page-Workspaces .custom-actions');
-
-			   if (!docsButton) {
-				  docsButton = document.createElement('button');
-				  docsButton.textContent = 'Docs';
-					docsButton.classList.add('btn', 'btn-default', 'docs-button');
-				  
-				  
-				  // Check if custom-actions div exists before inserting new elements
-				  if (customActionsDiv) {
-					customActionsDiv.parentNode.insertBefore(docsButton, customActionsDiv);
-				  }
-				  
-			   }
-			   
-			 
-			   
-				if (!reportsButton) {
-					// Create Reports button
-					reportsButton = document.createElement('button');
-					reportsButton.textContent = 'Reports';
-					reportsButton.classList.add('btn', 'btn-default', 'reports-button');
-				  
-				  
-				  // Check if custom-actions div exists before inserting new elements
-				  if (customActionsDiv) {
-					customActionsDiv.parentNode.insertBefore(reportsButton, customActionsDiv);
-				  }
-				}
+			let docsButton = document.querySelector('.docs-button');
+			let reportsButton = document.querySelector('.reports-button');
+			
+			if(docsButton)
+				docsButton.classList.add("hide");
+			
+			if(reportsButton)
+				reportsButton.classList.add("hide");
 				
-				docsButton.classList.remove("hide");
-				reportsButton.classList.remove("hide");
-			
-				docsButton.onclick = function() {
-					frappe.desktop.initializeSidebar(route[1] + ' Docs',frappe.desktop.docs);
+			if(route[0] == "Workspaces" && route[1])
+			{
+					// Check if the buttons have already been added
+					docsButton = document.querySelector('.docs-button');
+					reportsButton = document.querySelector('.reports-button');
+					// Find the div with class custom-actions
+					const customActionsDiv = document.querySelector('#page-Workspaces .custom-actions');
 
-				};
-				reportsButton.onclick = function() {
-					frappe.desktop.initializeSidebar(route[1] + ' Reports',frappe.desktop.reports);						
+				   if (!docsButton) {
+					  docsButton = document.createElement('button');
+					  docsButton.textContent = 'Docs';
+						docsButton.classList.add('btn', 'btn-default', 'docs-button');
+					  
+					  
+					  // Check if custom-actions div exists before inserting new elements
+					  if (customActionsDiv) {
+						customActionsDiv.parentNode.insertBefore(docsButton, customActionsDiv);
+					  }
+					  
+				   }
+				   
+					if (!reportsButton) {
+						// Create Reports button
+						reportsButton = document.createElement('button');
+						reportsButton.textContent = 'Reports';
+						reportsButton.classList.add('btn', 'btn-default', 'reports-button');
+					  
+					  
+					  // Check if custom-actions div exists before inserting new elements
+					  if (customActionsDiv) {
+						customActionsDiv.parentNode.insertBefore(reportsButton, customActionsDiv);
+					  }
+					}
+					
+					docsButton.classList.remove("hide");
+					reportsButton.classList.remove("hide");
+				
+					docsButton.onclick = function() {
+						frappe.desktop.initializeRightSidebar(route[1] + ' Docs',frappe.desktop.docs);
 
-			  };
+					};
+					reportsButton.onclick = function() {
+						frappe.desktop.initializeRightSidebar(route[1] + ' Reports',frappe.desktop.reports);						
 
-
-			
+				  };
+			}
 		}
 	},
 	
-	initializeSidebar: function(title,items) {
-		let entries = items; // Sample array of entries
+	initializeRightSidebar: function(title,items) {
+		let entries = items;
 		let sidebar = document.getElementById('workspace-sidebar');
 		let overlay = document.querySelector('.workspace-overlay');
 
@@ -493,31 +513,29 @@ $.extend(frappe.desktop, {
 				});
 			});
 
-		sidebar.classList.toggle('opened');
 
 		if (!overlay) {
 			overlay = document.createElement('div');
 			overlay.className = 'workspace-overlay';
 			document.body.appendChild(overlay);
-
-			/* overlay.addEventListener('click', () => {
-			  sidebar.classList.remove('opened');
-			  overlay.style.display = 'none';
-			}); */
 		  }
 		  
 		function closeSidebar() {
-			var sidebar = document.getElementById('workspace-sidebar');
-			var overlay = document.querySelector('.workspace-overlay');
+			let sidebar = document.getElementById('workspace-sidebar');
+			let overlay = document.querySelector('.workspace-overlay');
 			if (sidebar) {
 				sidebar.classList.remove('opened');
 			}
 			if (overlay) {
-				 overlay.style.display = 'none';
+				overlay.classList.remove('opened');
 			}
 		}
 		  
-		overlay.style.display = 'block';
+		// Animate in on the next frame
+		requestAnimationFrame(() => {
+			sidebar.classList.add('opened');
+			overlay.classList.add('opened');
+		});
 		  
 		   // Event delegation for closing sidebar when any link is clicked
 		document.body.addEventListener('click', function(event) {
@@ -607,65 +625,6 @@ $.extend(frappe.desktop, {
 		return m.route;
 	},
 	
-	
-	refresh: function() {
-		if(!frappe.boot.kard_settings.enable_theme)
-			return;
-
-		let route = frappe.get_route();
-
-		setTimeout(() => { 
-			route = frappe.get_route();
-
-			if(!route || (route[0] == "Workspaces"&& route[1] == "private")){
-				frappe.set_route("desk");
-				return;
-			}
-			else
-			{
-				// frappe.desktop.update_frappe_sidebar_button();
-				frappe.desktop.get_workspace_data();
-				frappe.desktop.add_workspace_buttons();
-				frappe.desktop.load_shortcuts();
-				frappe.desktop.add_bookmark_link();
-			}
-		}, 1000);
-		
-		
-		
-		setTimeout(() => { 
-			frappe.desktop.check_workspace_btns();
-		}, 2000);
-	},
-	
-	check_workspace_btns:function(){
-		if(!frappe.boot.kard_settings.check_workspace_btns)
-			return;
-		
-		let route = frappe.get_route();
-				
-		if(route[0] == "Workspaces")
-		{
-			let has_perm = frappe.model.can_write("Workspace");
-			const createButton = document.querySelector('button[data-label="Create%20Workspace"]');
-			const editButton = document.querySelector('button[data-label="Edit"]');
-			if(has_perm)
-			{
-				if(createButton)
-					createButton.classList.remove("hide");
-				if(editButton)
-					editButton.classList.remove("hide");
-			}
-			else
-			{
-				if(createButton)
-					createButton.classList.add("hide");
-				if(editButton)
-					editButton.classList.add("hide");
-			}
-		}
-	},
-	
 	load_shortcuts: function() {
 		let wrapper = document.getElementById('page-Workspaces');
 		if(wrapper){
@@ -694,14 +653,13 @@ $.extend(frappe.desktop, {
 			callback: function(response) {
 				frappe.desktop.desktop_icons = response.message[1];		
 				frappe.desktop.modules = response.message[2];	
-				frappe.desktop.render();
+				frappe.desktop.render_main();
 			},
 			freeze: false,
-			freeze_message: "Loading"
 		});
 	},
 
-	render: function() {
+	render_main: function() {
 		//frappe.utils.set_title(__("Desktop"));
 		//frappe.desktop.container_wrapper.innerHTML = '';
 
@@ -810,7 +768,7 @@ $.extend(frappe.desktop, {
 		else
 		{
 			desktop_icons_id.prepend(icon_grid);
-			desktop_icons_id.prepend(title_div);
+			//desktop_icons_id.prepend(title_div);
 		}
 		
 		if(frappe.boot.kard_settings.enable_bookmark_sorting)
@@ -1204,7 +1162,7 @@ $.extend(frappe.desktop, {
 	},
 	
 	add_bookmark_link: function() {
-		let route = frappe.get_route()
+		let route = frappe.get_route();
 		let new_link = '';
 		let pin_link = '';
 		let args = {'report':''};
@@ -1241,16 +1199,13 @@ $.extend(frappe.desktop, {
 				
 			}
 			else{
-				console.log("no ulelement");
 				return;
 			}
 		}
 		else{
-			console.log("no div element");
 			return;
 		}
 			
-		// console.log(route);
 		new_link.innerHTML = '<a class="grey-link dropdown-item">'+__("Bookmark")+'</a>';
 		new_link.classList.add('hide');
 		$(new_link).unbind();
