@@ -26,7 +26,8 @@
   "show_uncategorized_in_link_menu",
   "module_view_section_section",
   "enable_dynamic_module_view",
-  "check_workspace_btns"
+  "check_workspace_btns",
+  "enable_new_global_sidebar"
  ],
  "fields": [
   {
@@ -149,11 +150,17 @@
    "fieldname": "use_doctype_info_for_links_menu",
    "fieldtype": "Check",
    "label": "Use Doctype Info for Links Menu"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_new_global_sidebar",
+   "fieldtype": "Check",
+   "label": "enable_new_global_sidebar"
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2023-09-16 12:30:45.838220",
+ "modified": "2025-12-09 05:17:27.798572",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Kard Theme Settings",

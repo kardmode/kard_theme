@@ -59,7 +59,7 @@ $.extend(frappe.desktop, {
 				frappe.desktop.load_shortcuts();
 				frappe.desktop.add_bookmark_link();
 			}
-		}, 2000);
+		}, 1500);
 	},
 	
 	update_frappe_sidebar_button: function(){
@@ -69,6 +69,22 @@ $.extend(frappe.desktop, {
 			let sidebar_toggle = $(wrapper).find(".sidebar-toggle-btn");
 			if (sidebar_toggle)
 				sidebar_toggle.hide();
+		}
+		if (frappe.workspace) {
+			let ws = frappe.workspace;       // the Workspace instance
+			let page = ws.page;              // this is the frappe.ui.Page object
+
+			//page.add_inner_button(__("test Workspace"), () => {
+			//	console.log("Workspace button clicked");
+			//});		
+		}
+		
+
+		// Hide default sidebar if mini sidebar is enabled and we are on a Workspace page
+		if (frappe.boot.kard_settings.enable_new_global_sidebar) {
+			document.body.classList.add('mini-sidebar-enabled');
+		} else {
+			document.body.classList.remove('mini-sidebar-enabled');
 		}
 	},
 	
@@ -81,14 +97,19 @@ $.extend(frappe.desktop, {
 
 					var globalMenuSpan = document.createElement('span');
 					globalMenuSpan.id = 'globalmenu';
-					globalMenuSpan.classList.add('icon-lg', 'navbar-icon'); // Add your icon styling class
+					globalMenuSpan.classList.add('icon-lg', 'navbar-icon');
+					if(frappe.boot.kard_settings.enable_new_global_sidebar===1)
+					{
+						globalMenuSpan.classList.add('visible-sm', 'visible-xs');
+					}
+
 					navbarBrand.parentNode.insertBefore(globalMenuSpan, navbarBrand);
 
 					var svgIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 					svgIcon.setAttribute('viewBox', '0 0 24 24');
 					
 					var useElement = document.createElementNS("http://www.w3.org/2000/svg", "use");
-					useElement.setAttribute('href', '#icon-list');
+					useElement.setAttribute('href', '#icon-menu');
 					
 					svgIcon.appendChild(useElement);
 					globalMenuSpan.appendChild(svgIcon);
@@ -137,7 +158,7 @@ $.extend(frappe.desktop, {
 					return;
 				}
 
-				if(route[0] == "Workspaces")
+				if(route[0] == "Workspaces" && frappe.boot.kard_settings.enable_new_global_sidebar !== 1)
 				{
 					toggle_frappe_sidebar();
 					return;
@@ -159,8 +180,7 @@ $.extend(frappe.desktop, {
 					  sidebar.appendChild(sidebarContent);
 					  document.body.insertBefore(sidebar, document.querySelector('.main-section'));
 				}
-
-					
+	
 				const sidebarList = sidebar.querySelector('#global-sidebarList');
 				sidebarList.innerHTML = ''; // Clear previous list items
 				
@@ -228,12 +248,115 @@ $.extend(frappe.desktop, {
 				}
 			}
 
+            function renderMiniSidebar() {
+                let sidebar = document.getElementById('mini-sidebar');
+                if (!sidebar) {
+                    sidebar = document.createElement('div');
+                    sidebar.id = 'mini-sidebar';
+                    document.body.insertBefore(sidebar, document.querySelector('.main-section'));
+                }
+                
+                // Create shared tooltip element
+                let tooltip = document.getElementById('mini-sidebar-tooltip');
+                if (!tooltip) {
+                    tooltip = document.createElement('div');
+                    tooltip.id = 'mini-sidebar-tooltip';
+                    document.body.appendChild(tooltip);
+                }
+                
+                sidebar.innerHTML = '';
+                
+                 // Add Global Sidebar Button
+                 let globalBtn = document.createElement('div');
+                 globalBtn.className = 'mini-sidebar-item';
+                 globalBtn.setAttribute('data-label', 'Open Sidebar');
+                 globalBtn.onclick = function() {
+                     openSidebar();
+                 };
+                 // Tooltip events for global button
+                 globalBtn.addEventListener('mouseenter', function(e) {
+                     let rect = this.getBoundingClientRect();
+                     tooltip.innerText = this.getAttribute('data-label');
+					tooltip.style.left = (rect.right + 10) + 'px';
+                     tooltip.style.top = (rect.top + (rect.height / 2) - (tooltip.offsetHeight / 2) - 10) + 'px';
+                      tooltip.style.display = 'block';
+                     if(tooltip.offsetHeight === 0) {
+                          requestAnimationFrame(() => {
+                             tooltip.style.top = (rect.top + (rect.height / 2) - (tooltip.offsetHeight / 2)) + 'px';
+                          });
+                      }
+                 });
+                 globalBtn.addEventListener('mouseleave', function() {
+                     tooltip.style.display = 'none';
+                 });
+                 
+                 globalBtn.innerHTML = `
+                    <svg class="icon icon-lg">
+                        <use href="#icon-menu"></use>
+                    </svg>
+                 `;
+                 sidebar.appendChild(globalBtn);
+
+				let entries = frappe.boot.allowed_workspaces;
+                
+				for (var key in entries) {
+				if (entries.hasOwnProperty(key)) {
+					if(entries[key].is_hidden != 1){
+							let item = entries[key];
+							let name = item.name.replace(/\s+/g, '-').toLowerCase();
+							let icon = item.icon || 'folder-normal';
+							let iconVariable = 'icon-' + icon;
+							
+							let anchor = document.createElement('a');
+							anchor.className = 'mini-sidebar-item';
+							anchor.href = '/app/' + name;
+							anchor.setAttribute('data-label', item.title);
+							
+							anchor.addEventListener('mouseenter', function(e) {
+								let rect = this.getBoundingClientRect();
+								tooltip.innerText = this.getAttribute('data-label');
+								tooltip.style.left = (rect.right + 10) + 'px';
+								// Center vertically
+                     			tooltip.style.top = (rect.top + (rect.height / 2) - (tooltip.offsetHeight / 2) - 10) + 'px';
+								tooltip.style.display = 'block';
+								
+								// Adjust top if we don't know offsetHeight yet (first show)
+								if(tooltip.offsetHeight === 0) {
+									// Wait for next frame/render 
+									requestAnimationFrame(() => {
+										tooltip.style.top = (rect.top + (rect.height / 2) - (tooltip.offsetHeight / 2)) + 'px';
+									});
+								}
+							});
+							
+							anchor.addEventListener('mouseleave', function() {
+								tooltip.style.display = 'none';
+							});
+							
+							let iconHtml = `
+							<svg class="icon icon-lg">
+								<use href="#${iconVariable}"></use>
+							</svg>
+							<span class="mini-sidebar-label"">${item.title}</span>
+							`;
+							
+							anchor.innerHTML = iconHtml;
+							sidebar.appendChild(anchor);
+					}
+				}
+				}
+            }
+
+
 		if(!frappe.boot.kard_settings.enable_theme) 
 			return;
 
 		if(frappe.boot.kard_settings.enable_module_sidebar === 1){
+            if (frappe.boot.kard_settings.enable_new_global_sidebar == 1)
+				renderMiniSidebar();
+
 			addGlobalSidebarButton();
-			 // Event delegation for closing sidebar when any link is clicked
+			// Event delegation for closing sidebar when any link is clicked
 			document.body.addEventListener('click', function(event) {
 				var sidebar = document.getElementById('global-sidebar');
 				var overlay = document.querySelector('.workspace-overlay');
@@ -244,11 +367,11 @@ $.extend(frappe.desktop, {
 					closeSidebar();
 				}
 			});
+			 
 		}
 	},
-	
-	get_workspace_data: function() {
 
+	get_workspace_data: function() {		
 		let route = frappe.get_route();
 		if(!route){
 			return;
@@ -260,7 +383,6 @@ $.extend(frappe.desktop, {
 			{
 				let workspace = frappe.desktop.current_workspace = route[1];
 				let module = route[1];
-				
 				var matchingItem = frappe.boot.allowed_workspaces.find(item => item.name === route[1]);
 
 				if (matchingItem) {
@@ -358,6 +480,37 @@ $.extend(frappe.desktop, {
 				}
 			}
 		}
+
+		if(frappe.boot.kard_settings.enable_bookmarks)
+		{
+			let addBoomkarksButton = document.querySelector('.bookmarks-button');
+			if(addBoomkarksButton)
+				addBoomkarksButton.classList.add("hide");
+			
+			if(route[0] == "Workspaces" && route[1])
+			{
+				addBoomkarksButton = document.querySelector('.bookmarks-button');
+				const customActionsDiv = document.querySelector('#page-Workspaces .custom-actions');
+				if(!addBoomkarksButton)
+				{
+					addBoomkarksButton = document.createElement('button');
+					  	addBoomkarksButton.innerHTML = `<svg class="icon icon-sm"><use href="#icon-add"></use></svg><span style="margin-left: 5px;" class="hidden-xs hidden-sm hidden-md">Add Bookmark</span>`;
+						addBoomkarksButton.classList.add('btn', 'btn-default', 'bookmarks-button');
+						
+						
+						// Check if custom-actions div exists before inserting new elements
+						if (customActionsDiv) {
+							customActionsDiv.parentNode.insertBefore(addBoomkarksButton, customActionsDiv);
+						}
+				}
+				
+				addBoomkarksButton.classList.remove("hide");
+				addBoomkarksButton.onclick = function() {
+						frappe.desktop.workspace_show_bookmark_dialog();
+					};
+				}
+
+		}
 		
 		if (frappe.boot.kard_settings.enable_links_menus_in_workspace)
 		{
@@ -378,30 +531,30 @@ $.extend(frappe.desktop, {
 					// Find the div with class custom-actions
 					const customActionsDiv = document.querySelector('#page-Workspaces .custom-actions');
 
-				   if (!docsButton) {
-					  docsButton = document.createElement('button');
-					  docsButton.textContent = 'Docs';
+					if (!docsButton) {
+						docsButton = document.createElement('button');
+					  	docsButton.innerHTML = `<svg class="icon icon-sm"><use href="#icon-file"></use></svg><span style="margin-left: 5px;" class="hidden-xs hidden-sm hidden-md">DocTypes</span>`;
 						docsButton.classList.add('btn', 'btn-default', 'docs-button');
-					  
-					  
-					  // Check if custom-actions div exists before inserting new elements
-					  if (customActionsDiv) {
-						customActionsDiv.parentNode.insertBefore(docsButton, customActionsDiv);
-					  }
-					  
-				   }
+						
+						
+						// Check if custom-actions div exists before inserting new elements
+						if (customActionsDiv) {
+							customActionsDiv.parentNode.insertBefore(docsButton, customActionsDiv);
+						}
+						
+					}
 				   
 					if (!reportsButton) {
 						// Create Reports button
 						reportsButton = document.createElement('button');
-						reportsButton.textContent = 'Reports';
+						reportsButton.innerHTML = `<svg class="icon icon-sm"><use href="#icon-table_2"></use></svg><span style="margin-left: 5px;" class="hidden-xs hidden-sm hidden-md">Reports</span>`;
 						reportsButton.classList.add('btn', 'btn-default', 'reports-button');
-					  
-					  
-					  // Check if custom-actions div exists before inserting new elements
-					  if (customActionsDiv) {
-						customActionsDiv.parentNode.insertBefore(reportsButton, customActionsDiv);
-					  }
+						
+						
+						// Check if custom-actions div exists before inserting new elements
+						if (customActionsDiv) {
+							customActionsDiv.parentNode.insertBefore(reportsButton, customActionsDiv);
+						}
 					}
 					
 					docsButton.classList.remove("hide");
@@ -409,12 +562,10 @@ $.extend(frappe.desktop, {
 				
 					docsButton.onclick = function() {
 						frappe.desktop.initializeRightSidebar(route[1] + ' Docs',frappe.desktop.docs);
-
 					};
 					reportsButton.onclick = function() {
 						frappe.desktop.initializeRightSidebar(route[1] + ' Reports',frappe.desktop.reports);						
-
-				  };
+					};
 			}
 		}
 	},
@@ -438,9 +589,8 @@ $.extend(frappe.desktop, {
 
 			  sidebar.appendChild(sidebarContent);
 			  document.body.appendChild(sidebar);
-			}
+		}
 			
-		// If sidebar already exists, change the header content
 		var h2Element = sidebar.querySelector('h2');
 		if (h2Element) {
 			h2Element.textContent = title;
@@ -487,7 +637,7 @@ $.extend(frappe.desktop, {
 					
 					listItem.appendChild(aElement);
 					sidebarList.appendChild(listItem);
-				});
+		});
 									
 		const searchBox = sidebar.querySelector('#searchBox');
 		searchBox.addEventListener('input', () => {
@@ -518,7 +668,7 @@ $.extend(frappe.desktop, {
 			overlay = document.createElement('div');
 			overlay.className = 'workspace-overlay';
 			document.body.appendChild(overlay);
-		  }
+		}
 		  
 		function closeSidebar() {
 			let sidebar = document.getElementById('workspace-sidebar');
@@ -537,7 +687,7 @@ $.extend(frappe.desktop, {
 			overlay.classList.add('opened');
 		});
 		  
-		   // Event delegation for closing sidebar when any link is clicked
+		// Event delegation for closing sidebar when any link is clicked
 		document.body.addEventListener('click', function(event) {
 			var sidebar = document.getElementById('workspace-sidebar');
 			var overlay = document.querySelector('.workspace-overlay');
@@ -677,8 +827,6 @@ $.extend(frappe.desktop, {
 
 		}
 		
-
-		
 		frappe.desktop.sort_inst = [];
 		
 		let settings = frappe.boot.kard_settings;
@@ -693,17 +841,6 @@ $.extend(frappe.desktop, {
 		
 		if(settings.enable_module_header)
 		{
-			// modules that are organized by categories
-			/* for(key in frappe.desktop.modules){
-				let m = frappe.desktop.modules[key];
-				let newNode = frappe.desktop.render_module_desktop_icons(m,key);
-				new_container_div.appendChild(newNode);
-				frappe.desktop.setup_module_click($(newNode));
-				// frappe.desktop.setup_wiggle($(newNode));
-				// frappe.desktop.sort_inst.push(frappe.desktop.make_sortable($(newNode).get(0)));	
-			}
-			 */
-			 
 			let newNode = frappe.desktop.render_workspace_icons("Workspaces");
 			new_container_div.appendChild(newNode);
 			frappe.desktop.setup_module_click($(newNode));
@@ -845,87 +982,6 @@ $.extend(frappe.desktop, {
 		}
 		
 		return desktop_icons_id;	
-	},
-	
-	// deprecated
-	render_module_desktop_icons: function(modules,title) { 
-		
-		let desktop_icons_id = document.createElement('div');
-		desktop_icons_id.setAttribute("class", "desktop-icons");
-				
-		let title_div = document.createElement('div');
-		title_div.setAttribute("class", "h6 uppercase");
-		title_div.innerHTML = title;
-		
-		let icon_grid = document.createElement('div');
-		icon_grid.setAttribute("class", "icon-grid");
-				
-		modules.sort((a, b) => (a.label > b.label) ? 1 : -1)
-		var addedIcons = false;
-		modules.forEach(m => {
-			let type = (m.type).toLowerCase();
-			if (m.standard === 0 || m.blocked === 1 || type !=="module" || m.hidden === 1) { return; }
-			if(!m.route) {
-				if(m.url) {
-					m.route=strip(m.url, "#");
-				}
-				else if(type==="doctype") {
-					if(frappe.model.is_single(m.link_to)) {
-						m.route = 'Form/' + m.link_to;
-					} else {
-						m.route="List/" + m.link_to;
-					}
-				}
-				else if(type==="query-report") {
-					m.route="query-report/" + item.link_to;
-				}
-				else if(type==="report") {
-					m.route="List/" + m.doctype + "/Report/" + m.link_to;
-				}
-				else if(type==="page") {
-					m.route=m.link_to;
-				}
-				else if(type==="module") {
-					m.route="#modules/" + m.link_to;
-				}
-			}
-			
-			let label_wrapper = '<div class="kt-case-wrapper" title="'+m.label+'" data-name="'+m.link_to+'" data-link="'+m.route+'">'
-			+ '<div class="kt-app-icon" style="background-color:'+ m.color +'"><i class="'+m.icon+'"></i>'
-			+ '<div class="circle module-notis hide" data-doctype="'+m.link_to+'"><span class="circle-text"></span></div>'
-			+ '<div class="circle module-remove hide"><div class="circle-text"><b>&times</b></div></div>'
-			+ '</div>'
-			+ '<div class="kt-case-label ellipsis">'
-			+ '<span class="kt-case-label-text">' + m.label + '</span>' 
-			+ '</div>'
-			+ '</div>';
-			
-			icon_grid.innerHTML = icon_grid.innerHTML + label_wrapper;
-			addedIcons = true;
-		});
-		
-		
-		
-		if(addedIcons === false)
-		{
-			// let msg = document.createElement('div');
-			// msg.setAttribute("class", "h6 uppercase");
-			// msg.innerHTML = "No Bookmarks Added";
-			
-			// desktop_icons_id.appendChild(msg);
-			
-		}
-		else
-		{
-			desktop_icons_id.prepend(icon_grid);
-			desktop_icons_id.prepend(title_div);
-			
-		}
-			
-
-		
-		return desktop_icons_id;
-	
 	},
 
 	setup_user_bookmark_click: function(wrapper) {
@@ -1162,6 +1218,9 @@ $.extend(frappe.desktop, {
 	},
 	
 	add_bookmark_link: function() {
+		if(!frappe.boot.kard_settings.enable_bookmarks)
+			return;
+
 		let route = frappe.get_route();
 		let new_link = '';
 		let pin_link = '';
@@ -1169,10 +1228,6 @@ $.extend(frappe.desktop, {
 		
 		// Find the div element with the specified classes and without display: none style
 		const divElement = document.querySelector('div.content.page-container:not([style*="display: none"])');
-
-
-		if(!frappe.boot.kard_settings.enable_bookmarks)
-			return;
 
 		if (divElement) {
 			// Find the ul element within the div element
@@ -1280,6 +1335,141 @@ $.extend(frappe.desktop, {
 		frappe.desktop.show_bookmark_dialog(new_link,args);
 		frappe.desktop.show_pin_dialog(pin_link,args);
 	},
+
+	workspace_show_bookmark_dialog: function() {
+		let msg = __('Add Bookmarks To Desktop?');
+	
+		let fields = [
+			{
+				label: __('Type'),
+				fieldname: 'type',
+				fieldtype: 'Select',
+				options: [
+					{'value': 'DocType', 'description': __('DocType')},
+					{'value': 'Report', 'description': __('Report')},
+					{'value': 'Dashboard', 'description': __('Dashboard')},
+					{'value': 'Page', 'description': __('Page')},
+				],
+				default: 'DocType'
+			},
+			{
+				label: __('Link'),
+				fieldname: 'item',
+				fieldtype: 'Dynamic Link',
+				options: 'type',
+				reqd: 1
+			},
+			{
+				label: __('View'),
+				fieldname: 'doc_view',
+				fieldtype: 'Select',
+				options: [
+					{'value': 'List', 'description': __('List')},
+					{'value': 'Report Builder', 'description': __('Report Builder')},
+					{'value': 'Dashboard', 'description': __('Dashboard')},
+					{'value': 'Tree', 'description': __('Tree')},
+					{'value': 'New', 'description': __('New')},
+					{'value': 'Calendar', 'description': __('Calendar')},
+					{'value': 'Kanban', 'description': __('Kanban')},
+				],
+				default: 'List'
+			},
+			{
+				label: __('Label'),
+				fieldname: 'label',
+				fieldtype: 'Data'
+			},
+			{
+				label: __('Icon'),
+				fieldname: 'icon',
+				fieldtype: 'Icon',
+			},
+			{
+				label: __('Color'),
+				fieldname: 'color',
+				fieldtype: 'Color',
+			},
+
+		];
+					
+		const d = new frappe.ui.Dialog({
+			title: msg,
+			fields: fields,
+			primary_action_label: __('Add'),
+			primary_action: (values) => {
+				let route = '';
+				if (values.type === 'DocType') {
+					let item = values.item.trim().replace(/\s+/g, '-').toLowerCase();
+					route = item;
+					switch(values.doc_view)
+					{
+						case 'List':
+							break;
+						case 'Report Builder':
+							route = item+'/view/report';
+							break;
+						case 'Dashboard':
+							route = item+'/view/dashboard';
+							break;
+						case 'Tree':
+							route = item+'/view/tree';
+							break;
+						case 'New':
+							route = item+'/new';
+							break;
+						case 'Calendar':
+							route = item+'/view/calendar';
+							break;
+						case 'Kanban':
+							route = item+'/view/kanban';
+							break;
+					}
+				} else if (values.type === 'Report') {
+					route = 'query-report/' + values.item;
+				} else if (values.type === 'Dashboard') {
+					route = 'dashboard/' + values.item;
+				} else if (values.type === 'Page') {
+					route = values.item;
+				}
+
+				let args = {
+					'label': values.label || values.item,
+					'color': values.color,
+					'icon': values.icon,
+					'type': values.type,
+					'link_to': values.item,
+					'doc_view': values.doc_view,
+					'link': route,
+					'url': route,
+					'remove': 0
+				};
+				
+				frappe.desktop.workspace_add_bookmark(args);
+				d.hide();
+			},
+			
+		}); 
+		d.show();
+	},
+
+	workspace_add_bookmark: function(args) {
+		if (!args['url'] || !args['link']) {
+			args['url'] = args['link'] = frappe.get_route_str();
+		}
+		args['workspace'] = 'Home';
+		frappe.call({
+			method: 'kard_theme.kard_theme.doctype.kard_desktop_icon.kard_desktop_icon.add_user_icon',
+			args: {
+				'args':args,
+			},
+			callback: function(r) {
+				if(r.message) {
+					frappe.show_alert(__("Updated"));
+					location.reload();
+				}
+			}
+		});
+	},
 	
 	show_bookmark_dialog: function(new_link,args) {
 		let msg = __('Bookmark') + ' ' + args['label'] + ' To Desktop?'
@@ -1379,7 +1569,9 @@ $.extend(frappe.desktop, {
 	},
 
 	add_bookmark: function(args) {
-		args['url'] = args['link'] = frappe.get_route_str();
+		if (!args['url'] || !args['link']) {
+			args['url'] = args['link'] = frappe.get_route_str();
+		}
 		args['workspace'] = 'Home';
 		frappe.call({
 			method: 'kard_theme.kard_theme.doctype.kard_desktop_icon.kard_desktop_icon.add_user_icon',
@@ -1395,7 +1587,9 @@ $.extend(frappe.desktop, {
 	},
 	
 	add_pin: function(args) {
-		args['url'] = args['link'] = frappe.get_route_str();
+		if (!args['url'] || !args['link']) {
+			args['url'] = args['link'] = frappe.get_route_str();
+		}
 		args['workspace'] = 'Home';
 		frappe.call({
 			method: 'kard_theme.kard_theme.doctype.kard_pinned_entry.kard_pinned_entry.pin_user_icon',

@@ -178,7 +178,6 @@ def add_user_icon(args=None):
 				frappe.db.set_value('Kard Desktop Icon', icon_name, 'color', color)
 		
 		clear_desktop_icons_cache()
-
 	elif remove == '0' or remove  == 0:
 		if not label: label = link_to
 
