@@ -23,7 +23,8 @@
   "url",
   "column_break_10",
   "hidden",
-  "blocked"
+  "blocked",
+  "is_global"
  ],
  "fields": [
   {
@@ -120,10 +121,16 @@
    "fieldname": "description",
    "fieldtype": "Small Text",
    "label": "Description"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_global",
+   "fieldtype": "Check",
+   "label": "Is Global"
   }
  ],
  "links": [],
- "modified": "2023-09-20 09:14:22.936365",
+ "modified": "2026-09-02 19:25:12.291852",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Kard Pinned Entry",

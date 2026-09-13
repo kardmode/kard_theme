@@ -1,11 +1,315 @@
 frappe.provide('frappe.desktop');
 
+const KardPatches = {
+	init() {
+		this.layout();
+		this.baseList();
+	},
+
+	layout() {
+		const proto = frappe.ui.form?.Layout?.prototype;
+
+		if (!proto?.is_tabbed_layout) {
+			return;
+		}
+
+		if (proto.__kard_is_tabbed_layout_patched) {
+			return;
+		}
+
+		proto.__kard_is_tabbed_layout_patched = true;
+
+		const original_is_tabbed = proto.is_tabbed_layout;
+
+		proto.is_tabbed_layout = function () {
+			if (!frappe.boot.ui_preferences?.tabbed_forms) {
+				return false;
+			}
+
+			return original_is_tabbed.call(this);
+		};
+
+		if (proto.make_tab) {
+			const original_make_tab = proto.make_tab;
+
+			proto.make_tab = function (df) {
+				if (!this.is_tabbed_layout()) {
+					return this.make_section(df);
+				}
+
+				return original_make_tab.call(this, df);
+			};
+		}
+	},
+
+	baseList() {
+		const proto = frappe.views?.BaseList?.prototype;
+
+		if (!proto?.setup_filter_area) {
+			return;
+		}
+
+		if (proto.__kard_setup_filter_area_patched) {
+			return;
+		}
+
+		proto.__kard_setup_filter_area_patched = true;
+
+		const patch_filter_area_proto = (filter_area_proto) => {
+			if (filter_area_proto.__kard_filter_area_patched) {
+				return;
+			}
+			filter_area_proto.__kard_filter_area_patched = true;
+
+			const original_get_standard_filters = filter_area_proto.get_standard_filters;
+			filter_area_proto.get_standard_filters = function () {
+				const filters = original_get_standard_filters.call(this);
+
+				return filters.map((filter) => {
+					const fieldname = filter[1];
+
+					const field = this.list_view.page.fields_dict?.[fieldname];
+
+					if (!field) {
+						return filter;
+					}
+
+					if (fieldname === "docstatus") {
+						const value = field.get_value();
+
+						if (value === "not_cancelled") {
+							return [
+								filter[0],
+								"docstatus",
+								"!=",
+								"2",
+							];
+						}
+
+						return [
+							filter[0],
+							"docstatus",
+							"=",
+							value,
+						];
+					}
+
+					// Look up authoritative Doctype metadata to identify Check fields
+					const original_df = this.list_view.meta.fields?.find(
+						(f) => f.fieldname === fieldname
+					);
+
+					if (original_df && original_df.fieldtype === "Check") {
+						const raw_val = field.get_value();
+						const val = String(raw_val || "").trim().toLowerCase();
+						const is_yes = val === "yes" || val === "1" || val === "true";
+						return [
+							filter[0],
+							fieldname,
+							"=",
+							is_yes ? 1 : 0,
+						];
+					}
+
+					return filter;
+				});
+			};
+
+			const original_set_standard_filter = filter_area_proto.set_standard_filter;
+			if (original_set_standard_filter) {
+				filter_area_proto.set_standard_filter = function (filters) {
+					if (!filters || filters.length === 0) {
+						return original_set_standard_filter.call(this, filters);
+					}
+
+					const mapped_filters = filters.map((f) => {
+						if (Array.isArray(f) && f.length >= 4) {
+							const fieldname = f[1];
+							const condition = f[2];
+							const value = String(f[3]);
+
+							if (fieldname === "docstatus" && condition === "!=" && value === "2") {
+								return [f[0], fieldname, "=", "not_cancelled"];
+							}
+
+							const original_df = this.list_view?.meta?.fields?.find(
+								(df) => df.fieldname === fieldname
+							);
+
+							if (original_df && original_df.fieldtype === "Check") {
+								if (value === "1") {
+									return [f[0], fieldname, "=", "Yes"];
+								} else if (value === "0") {
+									return [f[0], fieldname, "=", "No"];
+								}
+							}
+						}
+						return f;
+					});
+
+					return original_set_standard_filter.call(this, mapped_filters);
+				};
+			}
+		};
+
+		// Try patching globally if FilterArea is exposed
+		if (typeof window !== "undefined" && window.FilterArea) {
+			patch_filter_area_proto(window.FilterArea.prototype);
+		}
+
+		const original_setup_filter_area = proto.setup_filter_area;
+		proto.setup_filter_area = function () {
+			if (this.meta?.is_submittable) {
+				this.custom_filter_configs = this.custom_filter_configs || [];
+
+				const has_docstatus = this.custom_filter_configs.some(
+					(c) => c.fieldname === "docstatus"
+				);
+
+				if (!has_docstatus) {
+					this.custom_filter_configs.push({
+						fieldtype: "Select",
+						label: __("Document Status"),
+						fieldname: "docstatus",
+						options: [
+							{ value: "not_cancelled", label: __("Not Cancelled") },
+							{ value: "", label: __("Any") },
+							{ value: "0", label: __("Draft") },
+							{ value: "1", label: __("Submitted") },
+							{ value: "2", label: __("Cancelled") },
+						],
+						default: "not_cancelled",
+						is_filter: 1,
+					});
+				}
+			}
+
+			// Clone Check fields instead of modifying meta
+			const original_fields = Array.isArray(this.meta?.fields)
+				? this.meta.fields
+				: null;
+
+			if (original_fields !== null) {
+				this.meta.fields = original_fields.map((df) => {
+					if (df.fieldtype === "Check" && df.in_standard_filter) {
+						return {
+							...df,
+							fieldtype: "Select",
+							options: "\nYes\nNo",
+						};
+					}
+					return df;
+				});
+			}
+
+			try {
+				const result = original_setup_filter_area.apply(this, arguments);
+
+				// Now that FilterArea is instantiated, we can patch its prototype safely
+				if (this.filter_area) {
+					patch_filter_area_proto(
+						this.filter_area.constructor?.prototype ||
+						Object.getPrototypeOf(this.filter_area)
+					);
+				}
+
+				// Enforce default docstatus if it was just instantiated and has no value
+				const docstatus_field = this.page?.fields_dict?.docstatus;
+				if (docstatus_field) {
+					const value = docstatus_field.get_value();
+					if (value === undefined || value === "") {
+						docstatus_field.set_value("not_cancelled");
+					}
+				}
+
+				return result;
+			} finally {
+				// Restore original metadata
+				if (original_fields !== null) {
+					this.meta.fields = original_fields;
+				}
+			}
+		};
+	},
+};
+
+KardPatches.init();
+
+function toggle_tabbed_forms(enabled) {
+	frappe.call({
+		method: "kard_theme.api.set_tabbed_forms",
+		args: {
+			enabled: enabled ? 1 : 0,
+		},
+		callback() {
+			location.reload();
+		},
+	});
+}
+
+function setup_tabbed_forms_toggle() {
+	if (frappe.session && frappe.session.user === "Guest") return;
+
+	if ($("#toggle-tabbed-forms").length) return;
+
+	const user_menu = $("#toolbar-user");
+	if (!user_menu.length) return;
+
+	const is_enabled = !!frappe.boot.ui_preferences?.tabbed_forms;
+	const label = is_enabled
+		? __("Disable Tabbed Forms")
+		: __("Enable Tabbed Forms");
+
+	const toggle_btn = $(`
+		<a id="toggle-tabbed-forms" class="dropdown-item" href="#" onclick="return false;">
+			${label}
+		</a>
+	`);
+
+	toggle_btn.on("click", function () {
+		const is_enabled = !!frappe.boot.ui_preferences?.tabbed_forms;
+		toggle_tabbed_forms(!is_enabled);
+	});
+
+	const logout_btn = user_menu.find('a[onclick*="logout"]');
+	if (logout_btn.length) {
+		toggle_btn.insertBefore(logout_btn);
+	} else {
+		user_menu.append(toggle_btn);
+	}
+}
+
+function setup_help_button() {
+	const help_li = $('.dropdown-help');
+	if (!help_li.length) return;
+
+	// Remove classes that hide it on small screens
+	help_li.removeClass('d-none d-lg-block');
+
+	// Replace "Help" text and caret with just the help icon
+	const help_a = help_li.find('.nav-link');
+	if (help_a.length && !help_a.find('use[href="#icon-help"]').length) {
+		help_a.html(`
+			<span>
+				<svg class="icon icon-md"><use href="#icon-help"></use></svg>
+			</span>
+		`);
+	}
+}
+
+function setup_print_preview_sidebar() {
+	let sidebar = $(".print-preview-sidebar");
+	if (sidebar.length && !sidebar.find("> .overlay-sidebar").length) {
+		sidebar.children().wrapAll('<div class="overlay-sidebar"></div>');
+	}
+}
+
 $(window).on('hashchange', function () {
-	// Reserved for future use or debugging
+	setup_print_preview_sidebar();
 });
 
 $(document).ajaxComplete(function () {
-	// Reserved for future use or debugging
+	setup_print_preview_sidebar();
 });
 
 $(document).ready(function () {
@@ -21,6 +325,9 @@ $(document).ready(function () {
 
 	observer.observe(targetElement, { attributes: true });
 	frappe.desktop.refresh();
+	setup_tabbed_forms_toggle();
+	setup_help_button();
+	setup_print_preview_sidebar();
 });
 
 
@@ -36,6 +343,14 @@ $.extend(frappe.desktop, {
 			}
 			return;
 		}
+
+		setup_tabbed_forms_toggle();
+		setup_help_button();
+		setup_print_preview_sidebar();
+
+		$(".layout-side-section").not("#page-Workspaces .layout-side-section, .print-preview-sidebar").css("display", "none");
+		$(".print-preview-sidebar").css("display", "");
+
 
 		// Safe check for boot settings
 		if (!frappe.boot || !frappe.boot.kard_settings || !frappe.boot.kard_settings.enable_theme) return;
@@ -60,9 +375,11 @@ $.extend(frappe.desktop, {
 
 			// Prefetch bookmarks if enabled but missing or outdated
 			if (frappe.boot.kard_settings.enable_bookmarks) {
+				const current_route = (frappe.get_route() || []).join('/');
 				frappe.call({
 					method: "kard_theme.kard_theme.doctype.kard_theme_settings.kard_theme_settings.get_theme_info",
 					callback: function (response) {
+						if ((frappe.get_route() || []).join('/') !== current_route) return;
 						if (response.message && response.message[1]) {
 							frappe.desktop.desktop_icons = response.message[1];
 						}
@@ -83,11 +400,10 @@ $.extend(frappe.desktop, {
 				sidebar_toggle.hide();
 		}
 		if (frappe.workspace) {
-			let ws = frappe.workspace;       // the Workspace instance
-			let page = ws.page;              // this is the frappe.ui.Page object
+			//let ws = frappe.workspace;       // the Workspace instance
+			//let page = ws.page;              // this is the frappe.ui.Page object
 
 			//page.add_inner_button(__("test Workspace"), () => {
-			//	console.log("Workspace button clicked");
 			//});		
 		}
 
@@ -426,6 +742,7 @@ $.extend(frappe.desktop, {
 				``
 				var docs = [];
 				var reports = [];
+				const current_route = (frappe.get_route() || []).join('/');
 				frappe.call({
 					method: "kard_theme.kard_theme.doctype.kard_theme_settings.kard_theme_settings.get",
 					args: {
@@ -433,6 +750,7 @@ $.extend(frappe.desktop, {
 						workspace: workspace,
 					},
 					callback: function (response) {
+						if ((frappe.get_route() || []).join('/') !== current_route) return;
 						var data = response.message.data;
 						data.every(m => {
 							if (m.label != "Reports") {
@@ -447,6 +765,10 @@ $.extend(frappe.desktop, {
 
 						// Custom sorting function
 						docs.sort(function (a, b) {
+							// Compare 'global_favorite' values (1 comes before 0)
+							if (a.global_favorite > b.global_favorite) return -1;
+							if (a.global_favorite < b.global_favorite) return 1;
+
 							// Compare 'favorite' values (1 comes before 0)
 							if (a.favorite > b.favorite) return -1;
 							if (a.favorite < b.favorite) return 1;
@@ -764,6 +1086,8 @@ $.extend(frappe.desktop, {
 		let shorcuts_div = document.getElementById('shorcuts');
 		if (!shorcuts_div)
 			return;
+
+		shorcuts_div.innerHTML = '';
 
 		let settings = frappe.boot.kard_settings;
 
@@ -1397,8 +1721,17 @@ $.extend(frappe.desktop, {
 					fieldname: 'color',
 					fieldtype: 'Color',
 				},
-
 			];
+
+			if (frappe.user.has_role('System Manager') || frappe.session.user === 'Administrator') {
+				fields.push({
+					label: __('Global Pin (All Users)'),
+					fieldname: 'is_global',
+					fieldtype: 'Check',
+					default: 0,
+					description: __('Pin for all users globally')
+				});
+			}
 
 			const d = new frappe.ui.Dialog({
 				title: msg,
@@ -1408,6 +1741,7 @@ $.extend(frappe.desktop, {
 					args['label'] = values.label;
 					args['color'] = values.color;
 					args['icon'] = values.icon;
+					args['is_global'] = values.is_global ? 1 : 0;
 					args['remove'] = 0;
 					frappe.desktop.add_pin(args);
 					d.hide();
@@ -1417,6 +1751,7 @@ $.extend(frappe.desktop, {
 					args['label'] = values.label;
 					args['color'] = values.color;
 					args['icon'] = values.icon;
+					args['is_global'] = values.is_global ? 1 : 0;
 					args['remove'] = 1;
 					frappe.desktop.add_pin(args);
 					d.hide();
@@ -1458,6 +1793,7 @@ $.extend(frappe.desktop, {
 			callback: function (r) {
 				if (r.message) {
 					frappe.show_alert(__("Updated"));
+					location.reload();
 				}
 			}
 		});

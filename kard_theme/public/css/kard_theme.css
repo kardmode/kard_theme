@@ -1,3 +1,24 @@
+.navbar-brand .app-logo {
+  transition: transform 0.2s ease;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+}
+
+.navbar-brand .app-logo:hover {
+  transform: scale(1.2);
+}
+
+.navbar .container {
+  gap: 10px
+}
+
+.navbar #navbar-breadcrumbs {
+  margin-left: unset;
+}
+
 #workspace-sidebar {
   position: fixed;
   top: 0;
@@ -244,7 +265,6 @@ html:has(.overlay-sidebar.opened) {
 
 #globalmenu {
   cursor: pointer;
-  margin-right: 15px;
   transition: transform 0.2s ease;
 }
 
@@ -438,7 +458,7 @@ html:has(.overlay-sidebar.opened) {
 }
 
 body.mini-sidebar-enabled .main-section {
-  margin-left: 60px !important;
+  margin-left: 45px !important;
 }
 
 body.mini-sidebar-enabled #page-Workspaces .layout-side-section {
@@ -455,8 +475,8 @@ body.mini-sidebar-enabled #page-Workspaces .layout-side-section {
   cursor: pointer;
   transition: background-color 0.2s ease;
   text-decoration: none !important;
-  width: 55px;
-  min-height: 55px;
+  width: 45px;
+  min-height: 45px;
   color: var(--text-color);
   border-bottom: 1px solid var(--dark-border-color);
   border-left: 4px solid transparent;
