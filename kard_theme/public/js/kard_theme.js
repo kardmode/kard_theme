@@ -1,11 +1,124 @@
 frappe.provide('frappe.desktop');
 
+const KardPatches = {
+	init() {
+		this.layout();
+	},
+
+	layout() {
+		const proto = frappe.ui.form?.Layout?.prototype;
+
+		if (!proto?.is_tabbed_layout) {
+			return;
+		}
+
+		if (proto.__kard_is_tabbed_layout_patched) {
+			return;
+		}
+
+		proto.__kard_is_tabbed_layout_patched = true;
+
+		const original_is_tabbed = proto.is_tabbed_layout;
+
+		proto.is_tabbed_layout = function () {
+			if (!frappe.boot.ui_preferences?.tabbed_forms) {
+				return false;
+			}
+
+			return original_is_tabbed.call(this);
+		};
+
+		if (proto.make_tab) {
+			const original_make_tab = proto.make_tab;
+
+			proto.make_tab = function (df) {
+				if (!this.is_tabbed_layout()) {
+					return this.make_section(df);
+				}
+
+				return original_make_tab.call(this, df);
+			};
+		}
+	},
+};
+
+KardPatches.init();
+
+function toggle_tabbed_forms(enabled) {
+	frappe.call({
+		method: "kard_theme.api.set_tabbed_forms",
+		args: {
+			enabled: enabled ? 1 : 0,
+		},
+		callback() {
+			location.reload();
+		},
+	});
+}
+
+function setup_tabbed_forms_toggle() {
+	if (frappe.session && frappe.session.user === "Guest") return;
+
+	if ($("#toggle-tabbed-forms").length) return;
+
+	const user_menu = $("#toolbar-user");
+	if (!user_menu.length) return;
+
+	const is_enabled = !!frappe.boot.ui_preferences?.tabbed_forms;
+	const label = is_enabled
+		? __("Disable Tabbed Forms")
+		: __("Enable Tabbed Forms");
+
+	const toggle_btn = $(`
+		<a id="toggle-tabbed-forms" class="dropdown-item" href="#" onclick="return false;">
+			${label}
+		</a>
+	`);
+
+	toggle_btn.on("click", function () {
+		const is_enabled = !!frappe.boot.ui_preferences?.tabbed_forms;
+		toggle_tabbed_forms(!is_enabled);
+	});
+
+	const logout_btn = user_menu.find('a[onclick*="logout"]');
+	if (logout_btn.length) {
+		toggle_btn.insertBefore(logout_btn);
+	} else {
+		user_menu.append(toggle_btn);
+	}
+}
+
+function setup_help_button() {
+	const help_li = $('.dropdown-help');
+	if (!help_li.length) return;
+
+	// Remove classes that hide it on small screens
+	help_li.removeClass('d-none d-lg-block');
+
+	// Replace "Help" text and caret with just the help icon
+	const help_a = help_li.find('.nav-link');
+	if (help_a.length && !help_a.find('use[href="#icon-help"]').length) {
+		help_a.html(`
+			<span>
+				<svg class="icon icon-md"><use href="#icon-help"></use></svg>
+			</span>
+		`);
+	}
+}
+
+function setup_print_preview_sidebar() {
+	let sidebar = $(".print-preview-sidebar");
+	if (sidebar.length && !sidebar.find("> .overlay-sidebar").length) {
+		sidebar.children().wrapAll('<div class="overlay-sidebar"></div>');
+	}
+}
+
 $(window).on('hashchange', function () {
-	// Reserved for future use or debugging
+	setup_print_preview_sidebar();
 });
 
 $(document).ajaxComplete(function () {
-	// Reserved for future use or debugging
+	setup_print_preview_sidebar();
 });
 
 $(document).ready(function () {
@@ -21,6 +134,9 @@ $(document).ready(function () {
 
 	observer.observe(targetElement, { attributes: true });
 	frappe.desktop.refresh();
+	setup_tabbed_forms_toggle();
+	setup_help_button();
+	setup_print_preview_sidebar();
 });
 
 
@@ -36,6 +152,14 @@ $.extend(frappe.desktop, {
 			}
 			return;
 		}
+
+		setup_tabbed_forms_toggle();
+		setup_help_button();
+		setup_print_preview_sidebar();
+
+		$(".layout-side-section").not("#page-Workspaces .layout-side-section, .print-preview-sidebar").css("display", "none");
+		$(".print-preview-sidebar").css("display", "");
+
 
 		// Safe check for boot settings
 		if (!frappe.boot || !frappe.boot.kard_settings || !frappe.boot.kard_settings.enable_theme) return;
@@ -60,9 +184,11 @@ $.extend(frappe.desktop, {
 
 			// Prefetch bookmarks if enabled but missing or outdated
 			if (frappe.boot.kard_settings.enable_bookmarks) {
+				const current_route = (frappe.get_route() || []).join('/');
 				frappe.call({
 					method: "kard_theme.kard_theme.doctype.kard_theme_settings.kard_theme_settings.get_theme_info",
 					callback: function (response) {
+						if ((frappe.get_route() || []).join('/') !== current_route) return;
 						if (response.message && response.message[1]) {
 							frappe.desktop.desktop_icons = response.message[1];
 						}
@@ -83,11 +209,10 @@ $.extend(frappe.desktop, {
 				sidebar_toggle.hide();
 		}
 		if (frappe.workspace) {
-			let ws = frappe.workspace;       // the Workspace instance
-			let page = ws.page;              // this is the frappe.ui.Page object
+			//let ws = frappe.workspace;       // the Workspace instance
+			//let page = ws.page;              // this is the frappe.ui.Page object
 
 			//page.add_inner_button(__("test Workspace"), () => {
-			//	console.log("Workspace button clicked");
 			//});		
 		}
 
@@ -426,6 +551,7 @@ $.extend(frappe.desktop, {
 				``
 				var docs = [];
 				var reports = [];
+				const current_route = (frappe.get_route() || []).join('/');
 				frappe.call({
 					method: "kard_theme.kard_theme.doctype.kard_theme_settings.kard_theme_settings.get",
 					args: {
@@ -433,6 +559,7 @@ $.extend(frappe.desktop, {
 						workspace: workspace,
 					},
 					callback: function (response) {
+						if ((frappe.get_route() || []).join('/') !== current_route) return;
 						var data = response.message.data;
 						data.every(m => {
 							if (m.label != "Reports") {
@@ -447,6 +574,10 @@ $.extend(frappe.desktop, {
 
 						// Custom sorting function
 						docs.sort(function (a, b) {
+							// Compare 'global_favorite' values (1 comes before 0)
+							if (a.global_favorite > b.global_favorite) return -1;
+							if (a.global_favorite < b.global_favorite) return 1;
+
 							// Compare 'favorite' values (1 comes before 0)
 							if (a.favorite > b.favorite) return -1;
 							if (a.favorite < b.favorite) return 1;
@@ -764,6 +895,8 @@ $.extend(frappe.desktop, {
 		let shorcuts_div = document.getElementById('shorcuts');
 		if (!shorcuts_div)
 			return;
+
+		shorcuts_div.innerHTML = '';
 
 		let settings = frappe.boot.kard_settings;
 
@@ -1397,8 +1530,17 @@ $.extend(frappe.desktop, {
 					fieldname: 'color',
 					fieldtype: 'Color',
 				},
-
 			];
+
+			if (frappe.user.has_role('System Manager') || frappe.session.user === 'Administrator') {
+				fields.push({
+					label: __('Global Pin (All Users)'),
+					fieldname: 'is_global',
+					fieldtype: 'Check',
+					default: 0,
+					description: __('Pin for all users globally')
+				});
+			}
 
 			const d = new frappe.ui.Dialog({
 				title: msg,
@@ -1408,6 +1550,7 @@ $.extend(frappe.desktop, {
 					args['label'] = values.label;
 					args['color'] = values.color;
 					args['icon'] = values.icon;
+					args['is_global'] = values.is_global ? 1 : 0;
 					args['remove'] = 0;
 					frappe.desktop.add_pin(args);
 					d.hide();
@@ -1417,6 +1560,7 @@ $.extend(frappe.desktop, {
 					args['label'] = values.label;
 					args['color'] = values.color;
 					args['icon'] = values.icon;
+					args['is_global'] = values.is_global ? 1 : 0;
 					args['remove'] = 1;
 					frappe.desktop.add_pin(args);
 					d.hide();
@@ -1458,6 +1602,7 @@ $.extend(frappe.desktop, {
 			callback: function (r) {
 				if (r.message) {
 					frappe.show_alert(__("Updated"));
+					location.reload();
 				}
 			}
 		});

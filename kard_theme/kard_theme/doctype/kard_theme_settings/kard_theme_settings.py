@@ -116,18 +116,29 @@ def get(module=None,workspace=None, build=False):
 	
 def check_pinned(data):
 	user = frappe.session.user
-	pinned = get_pinned_icons(user).get("user_icons")
+	pinned_data = get_pinned_icons(user)
+	user_pinned = pinned_data.get("user_icons") or []
+	global_pinned = pinned_data.get("global_icons") or []
+	
 	for s in data:
 		for item in s['items']:
 			name = item.name
 			item_type = item.type
 		
-			# Check if there is a matching entry in icons
-			matching_icon = next((icon for icon in pinned if icon.link_to == name and icon.type == item_type), None)
+			# Check global pinned first
+			matching_global = next((icon for icon in global_pinned if icon.link_to == name and icon.type == item_type), None)
+			if matching_global:
+				item["global_favorite"] = 1
+				item.label = _(matching_global.label)
+			else:
+				item["global_favorite"] = 0
 
-			if matching_icon:
+			# Check user pinned
+			matching_user = next((icon for icon in user_pinned if icon.link_to == name and icon.type == item_type), None)
+			if matching_user:
 				item["favorite"] = 1
-				item.label = _(matching_icon.label)
+				if not matching_global:
+					item.label = _(matching_user.label)
 			else:
 				item["favorite"] = 0
 			
@@ -137,9 +148,8 @@ def check_pinned(data):
 	
 # Custom sorting key function
 def custom_sort_key(item):
-    # Sort by 'favorite' values (1 comes before 0)
-    # Then, sort alphabetically by 'label'
-    return (-item["favorite"], item["label"])
+    # Sort by 'global_favorite' first (1 comes before 0), then 'favorite' (1 comes before 0), then alphabetically by 'label'
+    return (-item.get("global_favorite", 0), -item.get("favorite", 0), item.get("label", ""))
 	
 def add_section(data, label, icon, items, color="#7f8c8d",shown_in="module_view"):
 	"""Adds a section to the module data."""
@@ -223,24 +233,14 @@ def add_custom_report_list(data,module):
 
 	"""Returns list on new style reports for modules."""
 	report_fields = ["name", "ref_doctype", "report_type"]
-	report_meta = frappe.get_meta("Report")
 	order_by = "name"
-	
-	if report_meta.has_field('favorite'):
-		report_fields += ["favorite"]
-		order_by = "favorite desc, name"
 		
-	reports =  frappe.get_list("Report", fields=report_fields, filters=
+	reports = frappe.get_list("Report", fields=report_fields, filters=
 		{"disabled": 0, "module": module},
 		order_by=order_by)
 		
 	out = []
 	for r in reports:
-		global_favorite = 0
-		favorite = 0
-		if r.get('favorite') == 1:
-			global_favorite = 1
-
 		out.append({
 			"type": "Report",
 			"ref_doctype": r.ref_doctype,
@@ -248,8 +248,8 @@ def add_custom_report_list(data,module):
 			"label": _(r.name),
 			"name": r.name,
 			"icon": "",
-			"favorite": favorite,
-			"global_favorite": global_favorite,
+			"favorite": 0,
+			"global_favorite": 0,
 			"doc_view": "" if r.report_type in ("Query Report", "Script Report", "Custom Report") else "Report Builder"
 		})
 		
@@ -291,30 +291,20 @@ def add_workspace_custom_links(data,workspace):
 			continue
 			
 		elif type == "report":
-			global_favorite = 0
-			favorite = 0
-		
-			report_meta = frappe.get_meta("Report")
 			report_fields = ["report_type", "ref_doctype"]
-			if report_meta.has_field('favorite'):
-				report_fields += ["favorite"]
-			
-			r = frappe.db.get_value("Report", link.link_to, report_fields,as_dict=True)
-
-			if r.get('favorite') == 1:
-				global_favorite = 1
+			r = frappe.db.get_value("Report", link.link_to, report_fields, as_dict=True) or {}
 			
 			add_section(data, _('Reports'),section_icon,[
 			{
 				"type": link.type,
-				"ref_doctype": r.ref_doctype,
-				"is_query_report": 1 if r.report_type in ("Query Report", "Script Report", "Custom Report") else 0,
+				"ref_doctype": r.get("ref_doctype"),
+				"is_query_report": 1 if r.get("report_type") in ("Query Report", "Script Report", "Custom Report") else 0,
 				"name": name,
 				"label": _(link.label),
 				"url": link.url,
 				"icon": link.icon,
-				"favorite": favorite,
-				"global_favorite": global_favorite,
+				"favorite": 0,
+				"global_favorite": 0,
 				"doc_view": link.doc_view,
 			}],section_color,'module_menu')
 			
@@ -362,30 +352,20 @@ def add_custom_links(data,module,is_workspace=False):
 			add_custom_report_list(data,link.link_to)	
 			continue
 		elif type == "report":
-			global_favorite = 0
-			favorite = 0
-		
-			report_meta = frappe.get_meta("Report")
 			report_fields = ["report_type", "ref_doctype"]
-			if report_meta.has_field('favorite'):
-				report_fields += ["favorite"]
-		
-			r = frappe.db.get_value("Report", link.link_to,report_fields,as_dict=True)
-
-			if r.get('favorite') == 1:
-				global_favorite = 1
+			r = frappe.db.get_value("Report", link.link_to, report_fields, as_dict=True) or {}
 			
 			add_section(data, _('Reports'),link.icon,[
 			{
-				"doctype": r.ref_doctype,
+				"doctype": r.get("ref_doctype"),
 				"type": link.type,
-				"is_query_report": 1 if r.report_type in ("Query Report", "Script Report", "Custom Report") else 0,
+				"is_query_report": 1 if r.get("report_type") in ("Query Report", "Script Report", "Custom Report") else 0,
 				"name": name,
 				"label": _(link.label),
 				"url": link.url,
 				"icon": link.icon,
-				"favorite": favorite,
-				"global_favorite": global_favorite,
+				"favorite": 0,
+				"global_favorite": 0,
 				"doc_view": link.doc_view,
 			}],link.color,'module_menu')
 		

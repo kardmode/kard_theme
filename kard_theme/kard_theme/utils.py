@@ -14,6 +14,11 @@ def boot_session(bootinfo):
 		add_home_page(bootinfo)
 	
 	# bootinfo.kard_user_icons,bootinfo.kard_settings,bootinfo.kard_standard_icons = get_theme_info()	
+	bootinfo.ui_preferences = {
+		"tabbed_forms": cint(
+			frappe.defaults.get_user_default("enable_tabbed_forms") or 0
+		)
+	}
 		
 	bootinfo.kard_settings = settings
 		
