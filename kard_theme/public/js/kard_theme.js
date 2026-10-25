@@ -309,14 +309,72 @@ $.extend(frappe.desktop, {
 				sidebar = document.createElement('div');
 				sidebar.id = 'global-sidebar';
 
-				const sidebarContent = document.createElement('div');
-				sidebarContent.id = 'content';
-				sidebar.appendChild(sidebarContent);
+				sidebar.innerHTML = `
+					<div class="sidebar-header">
+						<div class="sidebar-header-title">
+							<svg class="icon icon-md"><use href="#icon-grid"></use></svg>
+							<span>${__("Workspaces")}</span>
+						</div>
+						<button class="sidebar-close-btn" aria-label="${__("Close")}">
+							<svg class="icon icon-sm"><use href="#icon-close"></use></svg>
+						</button>
+					</div>
+					<div class="sidebar-search-box">
+						<svg class="icon icon-xs sidebar-search-icon"><use href="#icon-search"></use></svg>
+						<input type="search" class="sidebar-search-input" placeholder="${__("Search apps & workspaces...")}" autocomplete="off">
+					</div>
+					<div id="content" class="sidebar-grid-content"></div>
+				`;
+
 				document.body.insertBefore(sidebar, document.querySelector('.main-section'));
+
+				// Close button click
+				sidebar.querySelector('.sidebar-close-btn').addEventListener('click', closeSidebar);
+
+				// Live search handler
+				const searchInput = sidebar.querySelector('.sidebar-search-input');
+				searchInput.addEventListener('input', function (e) {
+					const query = (e.target.value || '').toLowerCase().trim();
+					const items = sidebar.querySelectorAll('.kt-case-wrapper');
+					items.forEach(item => {
+						const title = (item.getAttribute('title') || '').toLowerCase();
+						const name = (item.getAttribute('data-name') || '').toLowerCase();
+						const label = (item.innerText || '').toLowerCase();
+						const matches = !query || title.includes(query) || name.includes(query) || label.includes(query);
+						item.style.display = matches ? '' : 'none';
+					});
+
+					// Hide/show section titles & dividers if empty
+					sidebar.querySelectorAll('.desktop-icons').forEach(sec => {
+						const hasVisibleItems = !!sec.querySelector('.kt-case-wrapper:not([style*="display: none"])');
+						sec.style.display = hasVisibleItems ? '' : 'none';
+					});
+					sidebar.querySelectorAll('.sidebar-divider').forEach(div => {
+						div.style.display = query ? 'none' : '';
+					});
+				});
+
+				// Swipe-left on touch devices to close
+				let touchStartX = 0;
+				sidebar.addEventListener('touchstart', (e) => {
+					touchStartX = e.touches[0].clientX;
+				}, { passive: true });
+				sidebar.addEventListener('touchend', (e) => {
+					let touchEndX = e.changedTouches[0].clientX;
+					if (touchStartX - touchEndX > 60) {
+						closeSidebar();
+					}
+				}, { passive: true });
 			}
 
 			const sidebarContent = sidebar.querySelector('#content');
 			sidebarContent.className = 'sidebar-grid-content';
+
+			// Reset search filter
+			const searchInput = sidebar.querySelector('.sidebar-search-input');
+			if (searchInput) {
+				searchInput.value = '';
+			}
 
 			const refreshSidebarContent = () => {
 				sidebarContent.innerHTML = ''; // Clear
@@ -346,16 +404,28 @@ $.extend(frappe.desktop, {
 			// Initial render from cache (refresh handles prefetching)
 			refreshSidebarContent();
 
-
 			if (!overlay) {
 				overlay = document.createElement('div');
 				overlay.className = 'workspace-overlay';
 				document.body.appendChild(overlay);
+				overlay.addEventListener('click', closeSidebar);
 			}
-			// Animate in on the next frame
+
+			// Add escape key listener
+			$(document).off('keydown.kard_sidebar').on('keydown.kard_sidebar', (e) => {
+				if (e.key === 'Escape' || e.keyCode === 27) {
+					closeSidebar();
+				}
+			});
+
+			// Animate in on next frame
 			requestAnimationFrame(() => {
 				sidebar.classList.add('opened');
 				overlay.classList.add('opened');
+				document.body.classList.add('kard-sidebar-open');
+				if (searchInput) {
+					setTimeout(() => searchInput.focus(), 150);
+				}
 			});
 		}
 
@@ -368,7 +438,11 @@ $.extend(frappe.desktop, {
 			if (overlay) {
 				overlay.classList.remove('opened');
 			}
+			document.body.classList.remove('kard-sidebar-open');
+			$(document).off('keydown.kard_sidebar');
 		}
+
+		frappe.desktop.closeSidebar = closeSidebar;
 
 		function renderMiniSidebar() {
 			let sidebar = document.getElementById('mini-sidebar');
@@ -490,13 +564,10 @@ $.extend(frappe.desktop, {
 				renderMiniSidebar();
 
 			addGlobalSidebarButton();
-			// Event delegation for closing sidebar when any link is clicked
+			// Event delegation for closing sidebar when overlay backdrop is clicked
 			document.body.addEventListener('click', function (event) {
 				var sidebar = document.getElementById('global-sidebar');
 				var overlay = document.querySelector('.workspace-overlay');
-				if (sidebar && (event.target.closest('a') || event.target.closest('.kt-app-icon')) && event.target.closest('#global-sidebar')) {
-					closeSidebar();
-				}
 				if (overlay && event.target.closest('.workspace-overlay')) {
 					closeSidebar();
 				}
@@ -957,16 +1028,16 @@ $.extend(frappe.desktop, {
 
 			let label = m.label || "";
 
-			let label_wrapper = '<div class="kt-case-wrapper" title="' + label + ' ' + (m.type || "") + '" data-id="' + m.name + '" data-name="' + m.link_to + '" data-link="' + m.route + '">'
+			let label_wrapper = '<a class="kt-case-wrapper" title="' + frappe.utils.escape_html(label + ' ' + (m.type || "")) + '" data-id="' + m.name + '" data-name="' + m.link_to + '" data-link="' + m.route + '" href="' + m.route + '" target="_blank">'
 				+ '<div class="kt-app-icon" ' + color_style + '>'
-				+ `<svg class="icon icon-lg"><use class="" href="#icon-` + icon + `"></use></svg>`
+				+ `<svg class="icon icon-lg"><use href="#icon-` + icon + `"></use></svg>`
 				+ '<div class="circle module-notis hide" data-doctype="' + m.link_to + '"><span class="circle-text"></span></div>'
-				+ '<div class="circle module-remove hide"><div class="circle-text"><b>&times</b></div></div>'
+				+ '<div class="circle module-remove hide"><div class="circle-text"><b>&times;</b></div></div>'
 				+ '</div>'
 				+ '<div class="kt-case-label ellipsis">'
-				+ '<span class="kt-case-label-text">' + label + '</span>'
+				+ '<span class="kt-case-label-text">' + frappe.utils.escape_html(label) + '</span>'
 				+ '</div>'
-				+ '</div>';
+				+ '</a>';
 
 			icon_grid.innerHTML = icon_grid.innerHTML + label_wrapper;
 			addedIcons = true;
@@ -1005,16 +1076,16 @@ $.extend(frappe.desktop, {
 					let icon = m.icon || 'folder-normal';
 					let label = m.title;
 
-					let label_wrapper = '<div class="kt-case-wrapper" title="' + label + '" data-name="' + name + '" data-link="' + m.route + '">'
+					let label_wrapper = '<a class="kt-case-wrapper" title="' + frappe.utils.escape_html(label) + '" data-name="' + name + '" data-link="' + m.route + '" href="' + m.route + '" target="_blank">'
 						+ '<div class="kt-app-icon" ' + color_style + '>'
-						+ `<svg class="icon icon-lg"><use class="" href="#icon-` + icon + `"></use></svg>`
+						+ `<svg class="icon icon-lg"><use href="#icon-` + icon + `"></use></svg>`
 						+ '<div class="circle module-notis hide" data-doctype="' + name + '"><span class="circle-text"></span></div>'
-						+ '<div class="circle module-remove hide"><div class="circle-text"><b>&times</b></div></div>'
+						+ '<div class="circle module-remove hide"><div class="circle-text"><b>&times;</b></div></div>'
 						+ '</div>'
 						+ '<div class="kt-case-label ellipsis">'
-						+ '<span class="kt-case-label-text">' + label + '</span>'
+						+ '<span class="kt-case-label-text">' + frappe.utils.escape_html(label) + '</span>'
 						+ '</div>'
-						+ '</div>';
+						+ '</a>';
 
 					icon_grid.innerHTML = icon_grid.innerHTML + label_wrapper;
 					addedIcons = true;
@@ -1041,13 +1112,22 @@ $.extend(frappe.desktop, {
 	setup_user_bookmark_click: function (wrapper) {
 		frappe.desktop.wiggling = false;
 
-		wrapper.on("click", ".kt-app-icon, .kt-app-icon-svg", function () {
-			if (!frappe.desktop.wiggling) {
-				frappe.desktop.open_user_bookmark($(this).parent());
+		wrapper.off("click", ".kt-case-wrapper").on("click", ".kt-case-wrapper", function (e) {
+			if (frappe.desktop.wiggling) return;
+			// Allow native browser middle-click or Ctrl-click to open in background tab
+			if (e.which === 2 || e.button === 1 || e.ctrlKey || e.metaKey || e.shiftKey) {
+				return;
+			}
+			e.preventDefault();
+			frappe.desktop.open_user_bookmark($(this));
+			if (frappe.desktop.closeSidebar) {
+				frappe.desktop.closeSidebar();
 			}
 		});
 
-		wrapper.on("click", ".circle .module-notis", function () {
+		wrapper.off("click", ".circle .module-notis").on("click", ".circle .module-notis", function (e) {
+			e.preventDefault();
+			e.stopPropagation();
 			var doctype = $(this).attr('data-doctype');
 			if (doctype) {
 				frappe.ui.notifications.show_open_count_list(doctype);
@@ -1059,14 +1139,22 @@ $.extend(frappe.desktop, {
 	setup_module_click: function (wrapper) {
 		frappe.desktop.wiggling = false;
 
-		wrapper.on("click", ".kt-app-icon, .kt-app-icon-svg", function () {
-			if (!frappe.desktop.wiggling) {
-
-				frappe.desktop.open_module($(this).parent());
+		wrapper.off("click", ".kt-case-wrapper").on("click", ".kt-case-wrapper", function (e) {
+			if (frappe.desktop.wiggling) return;
+			// Allow native browser middle-click or Ctrl-click to open in background tab
+			if (e.which === 2 || e.button === 1 || e.ctrlKey || e.metaKey || e.shiftKey) {
+				return;
+			}
+			e.preventDefault();
+			frappe.desktop.open_module($(this));
+			if (frappe.desktop.closeSidebar) {
+				frappe.desktop.closeSidebar();
 			}
 		});
 
-		wrapper.on("click", ".circle .module-notis", function () {
+		wrapper.off("click", ".circle .module-notis").on("click", ".circle .module-notis", function (e) {
+			e.preventDefault();
+			e.stopPropagation();
 			var doctype = $(this).attr('data-doctype');
 			if (doctype) {
 				frappe.ui.notifications.show_open_count_list(doctype);
