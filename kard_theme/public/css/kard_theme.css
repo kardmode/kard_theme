@@ -12,7 +12,7 @@
 }
 
 .navbar .container {
-  gap: 10px
+  gap: 10px;
 }
 
 .navbar #navbar-breadcrumbs {
@@ -300,7 +300,9 @@ body.kard-sidebar-open {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 #global-sidebar .sidebar-close-btn:hover {
@@ -436,6 +438,7 @@ body.kard-sidebar-open {
 .kt-app-icon {
   background-color: var(--light, #f1f5f9);
   --icon-stroke: var(--dark, #0f172a);
+  stroke-width: 1.5;
   width: 56px;
   height: 56px;
   display: flex;
@@ -445,7 +448,9 @@ body.kard-sidebar-open {
   border-radius: 14px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
   border: 1px solid rgba(0, 0, 0, 0.06);
-  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease;
+  transition:
+    transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.18s ease;
   position: relative;
 }
 
@@ -509,7 +514,6 @@ body.kard-sidebar-open {
 .circle-text {
   user-select: none;
 }
-
 
 @media (max-width: 767px) {
   .circle {
@@ -639,11 +643,10 @@ body.mini-sidebar-enabled #page-Workspaces .layout-side-section {
 }
 
 /* Folder Widget Styling */
-.folder-widget+.divider,
-.shortcut-widget-box+.divider {
+.folder-widget + .divider,
+.shortcut-widget-box + .divider {
   display: none;
 }
-
 
 .folder-widget {
   cursor: pointer;
@@ -674,7 +677,6 @@ body.mini-sidebar-enabled #page-Workspaces .layout-side-section {
   grid-gap: 4px;
   padding: 8px;
   aspect-ratio: 1 / 1;
-
 }
 
 .folder-preview-icon {
@@ -806,8 +808,6 @@ body.mini-sidebar-enabled #page-Workspaces .layout-side-section {
   cursor: pointer;
 }
 
-
-
 .folder-item-icon-wrapper {
   width: 60px;
   height: 60px;
@@ -845,7 +845,6 @@ body.mini-sidebar-enabled #page-Workspaces .layout-side-section {
   font-size: 14px !important;
 }
 
-
 .widget.links-widget-box .link-item .indicator-pill {
   margin-right: var(--margin-sm);
   height: auto !important;
@@ -862,7 +861,6 @@ body.mini-sidebar-enabled #page-Workspaces .layout-side-section {
   border-bottom: 5px solid var(--border-color);
 }
 
-
 .widget.quick-list-widget-box,
 .widget.links-widget-box,
 .widget.number-widget-box {
@@ -875,7 +873,7 @@ body.mini-sidebar-enabled #page-Workspaces .layout-side-section {
 
 .widget.shortcut-widget-box {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
-  transition: transform 0.1s ease
+  transition: transform 0.1s ease;
 }
 
 .widget.quick-list-widget-box:hover,
