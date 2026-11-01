@@ -147,6 +147,23 @@ function setup_print_preview_sidebar() {
 	}
 }
 
+function inject_custom_svg_icons() {
+	if (document.getElementById('icon-grid')) return;
+	const svg_icons = `
+		<svg style="display:none;" xmlns="http://www.w3.org/2000/svg">
+			<defs>
+				<symbol viewBox="0 0 24 24" id="icon-home">
+					<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+				</symbol>
+				<symbol viewBox="0 0 24 24" id="icon-grid">
+					<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>
+				</symbol>
+			</defs>
+		</svg>
+	`;
+	document.body.insertAdjacentHTML("beforeend", svg_icons);
+}
+
 $(window).on('hashchange', function () {
 	setup_print_preview_sidebar();
 });
@@ -171,6 +188,7 @@ $(document).ready(function () {
 	setup_tabbed_forms_toggle();
 	setup_help_button();
 	setup_print_preview_sidebar();
+	inject_custom_svg_icons();
 });
 
 
