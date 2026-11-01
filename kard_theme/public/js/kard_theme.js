@@ -211,6 +211,8 @@ $.extend(frappe.desktop, {
 
 		$(".layout-side-section").not("#page-Workspaces .layout-side-section, .print-preview-sidebar").css("display", "none");
 		$(".print-preview-sidebar").css("display", "");
+		// Sidebar was hidden behind the page's back; sync its toggle icon to "expand"
+		frappe.container?.page?.page?.update_sidebar_icon?.();
 
 
 		// Safe check for boot settings

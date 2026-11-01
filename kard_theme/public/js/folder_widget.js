@@ -178,6 +178,9 @@ frappe.provide("frappe.workspace_block");
 
 	function register_folder_widgets() {
 		if (!frappe.widget || !frappe.widget.widget_factory) return;
+		// Runs on both document.ready and app_ready; register and wrap only once
+		if (frappe.widget.__kard_folder_registered) return;
+		frappe.widget.__kard_folder_registered = true;
 
 		const BaseWidget = frappe.widget.widget_factory.card ? 
 			Object.getPrototypeOf(frappe.widget.widget_factory.card) : class {};
@@ -484,25 +487,41 @@ frappe.provide("frappe.workspace_block");
 					if (this.blocks) {
 						this.blocks["folder"] = FolderBlock;
 					}
-					const res = original_init_editorjs.apply(this, arguments);
-					if (this.tools && !this.tools.folder) {
-						this.tools.folder = {
-							class: FolderBlock,
-							config: {
-								page_data: this.page_data || [],
+					// Upstream assigns this.tools and passes it to new EditorJS() in the same call,
+					// so add the folder tool on assignment, before the editor is constructed
+					if (!Object.getOwnPropertyDescriptor(this, "tools")?.set) {
+						const workspace = this;
+						let tools = this.tools;
+						Object.defineProperty(this, "tools", {
+							configurable: true,
+							enumerable: true,
+							get() {
+								return tools;
 							},
-						};
+							set(value) {
+								if (value && !value.folder) {
+									value.folder = {
+										class: FolderBlock,
+										config: {
+											page_data: workspace.page_data || [],
+										},
+									};
+								}
+								tools = value;
+							},
+						});
 					}
-					return res;
+					return original_init_editorjs.apply(this, arguments);
 				};
 
-				const original_setup_customization = frappe.views.Workspace.prototype.setup_customization_buttons;
-				frappe.views.Workspace.prototype.setup_customization_buttons = function () {
-					const res = original_setup_customization.apply(this, arguments);
-					if (this.editor && this.editor.configuration && this.editor.configuration.tools && this.editor.configuration.tools.folder) {
-						this.editor.configuration.tools.folder.config.page_data = this.page_data;
+				// Keep folder page_data in sync when switching workspaces (upstream does this for its own tools here)
+				const original_prepare_editorjs = frappe.views.Workspace.prototype.prepare_editorjs;
+				frappe.views.Workspace.prototype.prepare_editorjs = function () {
+					const folder_tool = this.editor?.configuration?.tools?.folder;
+					if (folder_tool) {
+						folder_tool.config.page_data = this.page_data;
 					}
-					return res;
+					return original_prepare_editorjs.apply(this, arguments);
 				};
 			}
 		}

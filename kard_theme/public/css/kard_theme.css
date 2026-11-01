@@ -897,7 +897,7 @@ body.mini-sidebar-enabled #page-Workspaces .layout-side-section {
   top: var(--navbar-height) !important;
 }
 
-.page-actions .custom-actions.hidden-xs,
-.page-actions .custom-actions.hidden-md {
+.page-actions .custom-actions.hidden-xs:not(.hide),
+.page-actions .custom-actions.hidden-md:not(.hide) {
   display: flex !important;
 }
