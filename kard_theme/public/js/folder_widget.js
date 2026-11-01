@@ -517,3 +517,4 @@ frappe.provide("frappe.workspace_block");
 		register_folder_widgets();
 	});
 })();
+

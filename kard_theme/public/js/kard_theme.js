@@ -3,6 +3,7 @@ frappe.provide('frappe.desktop');
 const KardPatches = {
 	init() {
 		this.layout();
+		this.page();
 	},
 
 	layout() {
@@ -39,6 +40,39 @@ const KardPatches = {
 				return original_make_tab.call(this, df);
 			};
 		}
+	},
+
+	page() {
+		const proto = frappe.ui?.Page?.prototype;
+		if (!proto || proto.__kard_page_patched) return;
+		proto.__kard_page_patched = true;
+
+		proto.setup_overlay_sidebar = function () {
+			this.sidebar.css("display", "");
+			this.sidebar.find(".close-sidebar").remove();
+
+			if (this.sidebar.hasClass("opened")) {
+				this.close_sidebar();
+			} else {
+				let overlay_sidebar = this.sidebar.find(".overlay-sidebar").addClass("opened");
+				$('<div class="close-sidebar">').hide().appendTo(this.sidebar).fadeIn(100, "linear");
+				let scroll_container = $("html").css("overflow-y", "hidden");
+
+				this.sidebar.find(".close-sidebar").on("click", (e) => this.close_sidebar(e));
+				this.sidebar.on("click", "button:not(.dropdown-toggle)", (e) => this.close_sidebar(e));
+
+				this.close_sidebar = () => {
+					scroll_container.css("overflow-y", "");
+					this.sidebar.find("div.close-sidebar").fadeOut(100, "linear", () => {
+						overlay_sidebar
+							.removeClass("opened")
+							.find(".dropdown-toggle")
+							.removeClass("text-muted");
+						this.sidebar.find("div.close-sidebar").remove();
+					});
+				};
+			}
+		};
 	},
 };
 
