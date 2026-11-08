@@ -26,6 +26,13 @@ def set_tabbed_forms(enabled):
 
 
 @frappe.whitelist()
+def set_type_to_search(enabled):
+	"""Per-user switch for opening the Start panel by typing with nothing focused."""
+	frappe.defaults.set_user_default("kard_type_to_search", "1" if cint(enabled) else "0", frappe.session.user)
+	return cint(enabled)
+
+
+@frappe.whitelist()
 def get_app_index():
 	"""Module (and report type) for each DocType, Report and Page the user can open."""
 	index = frappe.cache().get_value(APP_INDEX_KEY)
@@ -108,6 +115,11 @@ def extend_bootinfo(bootinfo):
 	bootinfo.kard_start = {
 		"enabled": cint(frappe.conf.get("kard_start_menu")),
 		"shortcut": frappe.conf.get("kard_start_shortcut") or "alt+q",
+		# navbar search box + Ctrl+G open the panel instead of the awesomebar dropdown
+		"replace_awesomebar": cint(frappe.conf.get("kard_start_replace_awesomebar", 1)),
+		# typing with nothing focused opens the panel (each user can switch it off)
+		"type_to_search": cint(frappe.conf.get("kard_start_type_to_search", 1)),
+		"user_type_to_search": 0 if frappe.defaults.get_user_default("kard_type_to_search") == "0" else 1,
 		"app_index_version": get_app_index_version(),
 	}
 

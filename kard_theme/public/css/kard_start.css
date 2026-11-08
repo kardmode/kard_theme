@@ -334,6 +334,33 @@ body.kard-start-open {
 	word-break: break-word;
 }
 
+/* search results */
+.kard-start .ks-res-section {
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+	padding: 10px 8px 4px;
+}
+.kard-start .ks-res-section:first-child {
+	padding-top: 4px;
+}
+.kard-start .ks-res-loading {
+	padding: 6px 8px 6px 36px;
+	font-size: 12px;
+	color: var(--text-muted);
+}
+.kard-start .ks-record-title {
+	color: var(--text-muted);
+}
+.kard-start .ks-everywhere {
+	margin-top: 6px;
+	border-top: 1px solid var(--border-color);
+	border-radius: 0 0 8px 8px;
+	color: var(--text-muted);
+}
+
 /* Bookmarks title: Edit / New group */
 .kard-start .ks-bm-title {
 	display: flex;
@@ -625,6 +652,52 @@ body.kard-start-enabled #globalmenu,
 	align-items: center;
 	cursor: pointer;
 	margin-right: 8px;
+}
+
+/* compact: results only, over the navbar search box (opened by typing) */
+@media (min-width: 768px) {
+	.kard-start.compact {
+		top: var(--ks-c-top);
+		left: var(--ks-c-left);
+		width: var(--ks-c-width);
+		max-height: calc(100vh - var(--ks-c-top) - 16px);
+		transform: translateY(-4px);
+	}
+	.kard-start.compact.opened {
+		transform: none;
+	}
+	.kard-start.compact .ks-body,
+	.kard-start.compact .ks-tabs,
+	.kard-start.compact .ks-footer {
+		display: none !important;
+	}
+	.kard-start.compact .ks-search {
+		padding: 8px 12px;
+	}
+	.kard-start.compact .ks-search > .icon {
+		left: 24px;
+	}
+	.kard-start.compact .ks-input {
+		height: 36px;
+	}
+	.kard-start.compact .ks-results {
+		height: auto;
+		max-height: min(560px, calc(100vh - var(--ks-c-top) - 80px));
+		border-bottom: none;
+	}
+	.kard-start-backdrop.compact {
+		background: transparent;
+		backdrop-filter: none;
+		-webkit-backdrop-filter: none;
+	}
+}
+
+/* the navbar box is now just a button that opens the panel */
+body.kard-start-enabled #navbar-search[readonly] {
+	cursor: pointer;
+}
+.kard-start .ks-tts.on {
+	color: var(--primary, #2490ef);
 }
 
 /* tablet / phone: full-screen sheet with tabs */

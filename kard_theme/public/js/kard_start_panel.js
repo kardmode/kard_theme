@@ -184,7 +184,17 @@ frappe.provide("frappe.kard_start");
 		return null;
 	}
 
-	// ------------------------------------------------------------------ search (simple; full search is a later step)
+	// ------------------------------------------------------------------ search
+	//
+	// Local results (doctypes, reports, workspaces, bookmarks) are instant. Records come
+	// from frappe.utils.global_search.search — mrp overrides that with its ranked search,
+	// so its ordering and doctype hints apply here without kard_theme knowing about mrp.
+
+	const RECORDS_METHOD = "frappe.utils.global_search.search";
+	const RECORD_LIMIT = 8;
+	const APP_LIMIT = 8;
+	const looks_like_id = (q) => /\d/.test(q); // "sinv 42", "SO-0001": records first
+	const NEW_PREFIX = /^(new\s+|\+\s*)/i;
 
 	function score(label, name, q) {
 		const l = label.toLowerCase();
@@ -199,7 +209,7 @@ frappe.provide("frappe.kard_start");
 		return 0;
 	}
 
-	function search(items, bookmarks, pins, query) {
+	function search_local(items, bookmarks, pins, query) {
 		const q = query.trim().toLowerCase();
 		if (!q) return [];
 		const results = [];
@@ -217,6 +227,10 @@ frappe.provide("frappe.kard_start");
 		});
 		results.sort((a, b) => b.s - a.s || a.item.label.localeCompare(b.item.label));
 		return results.slice(0, RESULT_LIMIT);
+	}
+
+	function record_route(r) {
+		return ["Form", r.doctype, r.name];
 	}
 
 	// ------------------------------------------------------------------ panel
@@ -299,6 +313,7 @@ frappe.provide("frappe.kard_start");
 			this.$input.on("input", () => {
 				this.query = this.$input.val() || "";
 				this.active = 0;
+				if (this.compact && !this.query.trim()) this.set_compact(false);
 				this.render_results();
 			});
 
@@ -420,11 +435,12 @@ frappe.provide("frappe.kard_start");
 			this.$el.on("click", "[data-action]", (e) => {
 				e.preventDefault();
 				const action = e.currentTarget.dataset.action;
-				this.close();
+				if (action !== "type-to-search") this.close();
 				if (action === "profile") frappe.set_route("Form", "User", frappe.session.user);
 				if (action === "theme") new frappe.ui.ThemeSwitcher().show();
 				if (action === "settings") frappe.set_route("Form", "Kard Theme Settings");
 				if (action === "reload") frappe.ui.toolbar.clear_cache();
+				if (action === "type-to-search") set_user_type_to_search(!user_type_to_search());
 			});
 
 			$(window).on("resize.kard_start", frappe.utils.debounce(() => this.is_open && this.position(), 100));
@@ -432,7 +448,8 @@ frappe.provide("frappe.kard_start");
 
 		// --- open / close
 
-		open(initial_query) {
+		open(initial_query, opts) {
+			opts = opts || {};
 			if (this.is_open) {
 				this.$input.trigger("focus");
 				return;
@@ -442,6 +459,7 @@ frappe.provide("frappe.kard_start");
 			this.query = initial_query || "";
 			this.$input.val(this.query);
 			this.active = 0;
+			this.set_compact(!!opts.compact && !!this.query.trim(), true);
 
 			this.position();
 			this.render_footer();
@@ -453,7 +471,10 @@ frappe.provide("frappe.kard_start");
 				this.$backdrop.addClass("opened");
 			});
 			document.body.classList.add("kard-start-open");
-			setTimeout(() => this.$input.trigger("focus"), 30);
+			// focus now, not on a timer: keys typed right after type-to-search must land here
+			const input = this.$input[0];
+			input.focus();
+			input.setSelectionRange(input.value.length, input.value.length);
 
 			const pins = this.pins_loaded ? Promise.resolve(this.pins) : get_pins();
 			Promise.all([frappe.kard_start.get_catalogue(), get_bookmarks(), pins]).then(
@@ -475,6 +496,7 @@ frappe.provide("frappe.kard_start");
 
 		close() {
 			if (!this.is_open) return;
+			this.closed_at = Date.now();
 			this.hide_menu();
 			if (this.editing) this.set_editing(false);
 			this.is_open = false;
@@ -498,9 +520,35 @@ frappe.provide("frappe.kard_start");
 		}
 
 		position() {
+			const el = this.$el[0];
 			const navbar = document.querySelector(".navbar");
 			const top = navbar ? Math.round(navbar.getBoundingClientRect().bottom) : 48;
-			this.$el[0].style.setProperty("--ks-top", top + "px");
+			el.style.setProperty("--ks-top", top + "px");
+
+			// compact: sit over the navbar search box, like its old dropdown
+			const box = document.querySelector(".search-bar:not(.hidden)") || document.getElementById("navbar-search");
+			const r = box && box.getBoundingClientRect();
+			if (r && r.width) {
+				const width = Math.min(Math.max(r.width + 24, 560), window.innerWidth - 32);
+				const left = Math.max(16, Math.min(r.left - 12, window.innerWidth - width - 16));
+				el.style.setProperty("--ks-c-left", left + "px");
+				el.style.setProperty("--ks-c-top", Math.max(4, r.top - 8) + "px");
+				el.style.setProperty("--ks-c-width", width + "px");
+			} else {
+				el.style.setProperty("--ks-c-left", "50%");
+				el.style.setProperty("--ks-c-top", top + 8 + "px");
+				el.style.setProperty("--ks-c-width", "min(600px, calc(100vw - 32px))");
+			}
+		}
+
+		set_compact(on, silent) {
+			this.compact = !!on;
+			this.$el.toggleClass("compact", this.compact);
+			this.$backdrop.toggleClass("compact", this.compact);
+			if (!silent && this.is_open) {
+				this.position();
+				this.$input.trigger("focus");
+			}
 		}
 
 		// --- pinning (Kard Pinned Entry, the user's own)
@@ -737,6 +785,11 @@ frappe.provide("frappe.kard_start");
 				}
 				return;
 			}
+			if (e.key === "Tab" && this.compact) {
+				e.preventDefault();
+				this.set_compact(false);
+				return;
+			}
 			if (!this.query) return;
 			if (e.key === "ArrowDown" || e.key === "ArrowUp") {
 				e.preventDefault();
@@ -746,6 +799,11 @@ frappe.provide("frappe.kard_start");
 				this.highlight(true);
 			} else if (e.key === "Enter") {
 				e.preventDefault();
+				if (this.active === 0 && this.records_loading && looks_like_id(this.query.trim())) {
+					// the best match for an ID is probably a record that hasn't arrived yet
+					this.pending_enter = { ctrl: e.ctrlKey || e.metaKey };
+					return;
+				}
 				this.open_active(e);
 			}
 		}
@@ -753,12 +811,77 @@ frappe.provide("frappe.kard_start");
 		open_active(e) {
 			const r = this.results[this.active];
 			if (!r) return;
-			const new_doc = e && (e.ctrlKey || e.metaKey) && e.type === "keydown";
+			const new_doc = e && (e.ctrlKey || e.metaKey) && (e.type === "keydown" || e.synthetic);
+			const q = this.query.trim();
 			if (r.kind === "bookmark") {
 				this.launch(() => open_bookmark(r.item));
+			} else if (r.kind === "record") {
+				this.launch(() => frappe.set_route(record_route(r.item)));
+			} else if (r.kind === "action") {
+				this.launch(() => frappe.kard_start.open_item(r.item, true));
+			} else if (r.kind === "everywhere") {
+				this.launch(() => frappe.searchdialog && frappe.searchdialog.search.init_search(q, "global_search"));
 			} else {
 				this.launch(() => frappe.kard_start.open_item(r.item, new_doc));
 			}
+		}
+
+		// --- record search (debounced; replies for an older query are dropped)
+
+		// Same pattern as mrp's live awesomebar results (200ms pause, limit 8, cache), plus at
+		// most one request in flight: the full-text search can take seconds on big sites, so
+		// while one runs, only the latest query waits its turn instead of stacking up.
+		request_records(q) {
+			this.records_cache = this.records_cache || new Map();
+			if (q.length < 2 || NEW_PREFIX.test(q)) {
+				this.records = { q, rows: [] };
+				this.records_loading = false;
+				return;
+			}
+			if (this.records && this.records.q === q) return;
+			const cache_key = q.toLowerCase();
+			if (this.records_cache.has(cache_key)) {
+				this.records = { q, rows: this.records_cache.get(cache_key) };
+				this.records_loading = false;
+				return;
+			}
+			this.records_loading = true;
+			clearTimeout(this.records_timer);
+			this.records_timer = setTimeout(() => this.fetch_records(), 200);
+		}
+
+		fetch_records() {
+			if (this.records_in_flight) return; // picked up when the current one returns
+			const q = this.query.trim();
+			const cache_key = q.toLowerCase();
+			if (!this.is_open || q.length < 2 || this.records_cache.has(cache_key)) return;
+			this.records_in_flight = true;
+			frappe
+				.xcall(RECORDS_METHOD, { text: q, start: 0, limit: RECORD_LIMIT })
+				.catch(() => null)
+				.then((rows) => {
+					this.records_in_flight = false;
+					if (rows) {
+						this.records_cache.set(cache_key, rows);
+						if (this.records_cache.size > 40) this.records_cache.delete(this.records_cache.keys().next().value);
+					}
+					const now = this.query.trim();
+					if (now !== q) {
+						// typed on meanwhile: re-render for what's there now (uses the cache or fetches)
+						this.records = null;
+						this.render_results(true);
+						return;
+					}
+					this.records = { q, rows: rows || [], failed: !rows };
+					this.records_loading = false;
+					this.render_results(true);
+					if (this.pending_enter) {
+						const pe = this.pending_enter;
+						this.pending_enter = null;
+						this.active = 0;
+						this.open_active({ ctrlKey: pe.ctrl, synthetic: true });
+					}
+				});
 		}
 
 		// --- rendering
@@ -940,37 +1063,118 @@ frappe.provide("frappe.kard_start");
 			);
 		}
 
-		render_results() {
-			const searching = !!this.query.trim();
+		build_results(q) {
+			const new_match = q.match(NEW_PREFIX);
+			const app_q = new_match ? q.slice(new_match[0].length) : q;
+			const local = app_q ? search_local(this.catalogue, this.bookmarks, this.pins, app_q) : [];
+
+			// Actions: "New X" for the best-matching creatable doctypes
+			const actions = local
+				.filter((r) => r.kind === "app" && r.item.type === "doctype" && r.item.can_create && (new_match || r.s >= 60))
+				.slice(0, new_match ? 5 : 2)
+				.map((r) => ({ kind: "action", item: r.item, s: r.s }));
+
+			const apps = new_match ? [] : local.slice(0, APP_LIMIT);
+			const rec_state = this.records && this.records.q === q ? this.records.rows : null;
+			const records = new_match ? [] : (rec_state || []).slice(0, RECORD_LIMIT).map((r) => ({ kind: "record", item: r }));
+			const id_like = looks_like_id(q);
+
+			// Best match
+			let best = null;
+			if (new_match) best = actions[0];
+			else if (id_like && records.length) best = records[0];
+			else if (apps.length && (apps[0].s >= 60 || !records.length)) best = apps[0];
+			else best = records[0] || apps[0] || actions[0];
+			const not_best = (r) => r !== best;
+
+			const sections = [];
+			if (best) sections.push({ title: __("Best match"), rows: [best] });
+			const app_sec = { title: __("DocTypes & Reports"), rows: apps.filter(not_best) };
+			const rec_sec = {
+				title: __("Records"),
+				rows: records.filter(not_best),
+				loading: !new_match && q.length >= 2 && !rec_state,
+				failed: !!(rec_state && this.records.failed),
+			};
+			const act_sec = { title: __("Actions"), rows: actions.filter(not_best) };
+			if (id_like) sections.push(rec_sec, app_sec, act_sec);
+			else sections.push(app_sec, rec_sec, act_sec);
+			sections.push({ rows: [{ kind: "everywhere", item: { label: q } }] });
+			return sections;
+		}
+
+		render_results(keep_active) {
+			const q = this.query.trim();
+			const searching = !!q;
 			this.$el.toggleClass("searching", searching);
 			this.$el.find(".ks-results").prop("hidden", !searching);
 			if (!searching) {
 				this.results = [];
+				this.records_loading = false;
+				this.pending_enter = null;
 				return;
 			}
-			this.results = search(this.catalogue, this.bookmarks, this.pins, this.query);
+			this.request_records(q);
+
+			const prev = keep_active && this.results[this.active];
+			const sections = this.build_results(q);
+			this.results = [];
+			let html = "";
+			sections.forEach((sec) => {
+				if (!sec.rows.length && !sec.loading && !sec.failed) return;
+				if (sec.title) html += `<div class="ks-res-section">${esc(sec.title)}</div>`;
+				if (sec.failed) {
+					html += `<div class="ks-res-loading">${esc(__("Record search didn't respond. Try again, or use Search everywhere."))}</div>`;
+				}
+				sec.rows.forEach((r) => {
+					const i = this.results.push(r) - 1;
+					html += this.result_html(r, `data-result="${i}" role="option" id="ks-result-${i}"`);
+				});
+				if (sec.loading && !sec.rows.length) {
+					html += `<div class="ks-res-loading">${esc(__("Searching records…"))}</div>`;
+				}
+			});
+			this.$el.find(".ks-results").html(html);
+
+			// keep the highlight on the same row when records arrive, unless it was the top row
+			if (prev && this.active > 0) {
+				const same = this.results.findIndex((r) => r.kind === prev.kind && r.item === prev.item);
+				this.active = same >= 0 ? same : 0;
+			}
 			if (this.active >= this.results.length) this.active = 0;
-			const $r = this.$el.find(".ks-results");
-			if (!this.results.length) {
-				$r.html(`<div class="ks-empty">${esc(__("Nothing matches \"{0}\"", [this.query.trim()]))}</div>`);
-				return;
-			}
-			$r.html(
-				this.results
-					.map((r, i) => {
-						const attrs = `data-result="${i}" role="option" id="ks-result-${i}"`;
-						if (r.kind === "bookmark") {
-							return `<a href="${esc(bookmark_href(r.item))}" class="ks-row" ${attrs}>
-								<span class="ks-row-icon">${icon(r.item.icon)}</span>
-								<span class="ks-row-label">${esc(r.item.label)}</span>
-								<span class="ks-tag">${esc(TYPE_INFO.bookmark.tag)}</span>
-							</a>`;
-						}
-						return this.row_html(r.item, attrs);
-					})
-					.join("")
-			);
 			this.highlight();
+		}
+
+		result_html(r, attrs) {
+			if (r.kind === "bookmark") {
+				return `<a href="${esc(bookmark_href(r.item))}" class="ks-row" ${attrs}>
+					<span class="ks-row-icon">${icon(r.item.icon)}</span>
+					<span class="ks-row-label">${esc(r.item.label)}</span>
+					<span class="ks-tag">${esc(TYPE_INFO.bookmark.tag)}</span>
+				</a>`;
+			}
+			if (r.kind === "record") {
+				const d = r.item;
+				const title = d.title && d.title !== d.name ? d.title : "";
+				return `<a href="${esc(route_url(record_route(d)))}" class="ks-row ks-record" ${attrs}>
+					<span class="ks-row-icon">${icon("file")}</span>
+					<span class="ks-row-label">${esc(d.name)}${title ? `<span class="ks-record-title"> · ${esc(title)}</span>` : ""}</span>
+					<span class="ks-module">${esc(__(d.doctype))}</span>
+				</a>`;
+			}
+			if (r.kind === "action") {
+				return `<a href="${esc(frappe.kard_start.item_url(r.item) + "/new")}" class="ks-row" ${attrs}>
+					<span class="ks-row-icon">${icon("add")}</span>
+					<span class="ks-row-label">${esc(__("New {0}", [r.item.label]))}</span>
+				</a>`;
+			}
+			if (r.kind === "everywhere") {
+				return `<a href="#" class="ks-row ks-everywhere" ${attrs}>
+					<span class="ks-row-icon">${icon("search")}</span>
+					<span class="ks-row-label">${esc(__("Search everywhere for \"{0}\"", [r.item.label]))}</span>
+				</a>`;
+			}
+			return this.row_html(r.item, attrs);
 		}
 
 		highlight(scroll) {
@@ -991,6 +1195,9 @@ frappe.provide("frappe.kard_start");
 				<span class="ks-footer-actions">
 					<button class="ks-icon-btn" data-action="theme" title="${esc(__("Toggle theme"))}" aria-label="${esc(__("Toggle theme"))}"><svg class="icon icon-sm" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 2a6 6 0 0 1 0 12z" fill="currentColor"/></svg></button>
 					${is_sm ? `<button class="ks-icon-btn" data-action="settings" title="${esc(__("Kard Theme Settings"))}" aria-label="${esc(__("Kard Theme Settings"))}">${icon("setting-gear")}</button>` : ""}
+					${type_to_search_allowed() ? `<button class="ks-icon-btn ks-tts ${user_type_to_search() ? "on" : ""}" data-action="type-to-search"
+						title="${esc(user_type_to_search() ? __("Type anywhere to search: on") : __("Type anywhere to search: off"))}"
+						aria-pressed="${user_type_to_search() ? "true" : "false"}" aria-label="${esc(__("Type anywhere to search"))}">${icon("keyboard")}</button>` : ""}
 					<button class="ks-icon-btn" data-action="reload" title="${esc(__("Reload"))}" aria-label="${esc(__("Reload"))}">${icon("refresh")}</button>
 				</span>
 			`);
@@ -1004,8 +1211,86 @@ frappe.provide("frappe.kard_start");
 		return frappe.kard_start._panel;
 	}
 
+	// ------------------------------------------------------------------ settings (boot, from site_config + user default)
+
+	const start_cfg = () => frappe.boot.kard_start || {};
+	const flag = (v, dflt) => (v === undefined || v === null ? dflt : !!cint(v));
+	const replace_awesomebar = () => flag(start_cfg().replace_awesomebar, true);
+	const type_to_search_allowed = () => flag(start_cfg().type_to_search, true);
+	const user_type_to_search = () => flag(start_cfg().user_type_to_search, true);
+
+	function set_user_type_to_search(on) {
+		frappe.boot.kard_start = Object.assign({}, start_cfg(), { user_type_to_search: on ? 1 : 0 });
+		frappe.xcall("kard_theme.api.set_type_to_search", { enabled: on ? 1 : 0 });
+		frappe.show_alert({
+			message: on ? __("Type anywhere to search is on") : __("Type anywhere to search is off"),
+			indicator: on ? "green" : "orange",
+		});
+		const p = frappe.kard_start._panel;
+		if (p && p.is_open) p.render_footer();
+	}
+
+	// ------------------------------------------------------------------ navbar search box + Ctrl+G
+
+	function take_over_navbar_search() {
+		const input = document.getElementById("navbar-search");
+		if (!input || input.dataset.kardStart) return;
+		input.dataset.kardStart = "1";
+		input.setAttribute("readonly", "readonly"); // typing happens in the panel
+		input.setAttribute("aria-haspopup", "dialog");
+		input.addEventListener("focus", () => {
+			const p = panel();
+			const text = input.value;
+			input.value = "";
+			input.blur();
+			// focus can bounce back to the box right after the panel closes
+			if (p.is_open || Date.now() - (p.closed_at || 0) < 300) return;
+			p.open(text, { compact: !!text.trim() });
+		});
+	}
+
+	// ------------------------------------------------------------------ type anywhere to search
+
+	const NO_CAPTURE_INSIDE = [
+		".modal",
+		".datatable",
+		".form-grid",
+		".grid-row",
+		".frappe-control",
+		".ql-editor",
+		".ace_editor",
+		".CodeMirror",
+		".dropdown-menu",
+		".awesomplete",
+		".kard-start",
+		".popover",
+	].join(",");
+
+	function can_capture(e) {
+		if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return false;
+		if (!e.key || e.key.length !== 1 || e.key === " " || e.key === "?") return false; // ? = shortcut help
+		if (!type_to_search_allowed() || !user_type_to_search()) return false;
+		const p = frappe.kard_start._panel;
+		if (p && p.is_open) return false;
+		if (document.querySelector(".modal.show, .dropdown-menu.show")) return false;
+		const a = document.activeElement;
+		if (a && a !== document.body && a !== document.documentElement) {
+			if (a.isContentEditable || a.matches("input, textarea, select, [contenteditable]")) return false;
+			if (a.closest(NO_CAPTURE_INSIDE)) return false;
+		}
+		const t = e.target;
+		if (t && t.closest && t.closest(NO_CAPTURE_INSIDE + ",input,textarea,select,[contenteditable]")) return false;
+		return true;
+	}
+
+	function on_type_anywhere(e) {
+		if (!can_capture(e)) return;
+		e.preventDefault();
+		panel().open(e.key, { compact: true });
+	}
+
 	Object.assign(frappe.kard_start, {
-		open: (q) => panel().open(q),
+		open: (q, opts) => panel().open(q, opts),
 		close: () => frappe.kard_start._panel && frappe.kard_start._panel.close(),
 		toggle: () => panel().toggle(),
 	});
@@ -1054,5 +1339,21 @@ frappe.provide("frappe.kard_start");
 			description: __("Open Start menu"),
 			ignore_inputs: true,
 		});
+
+		if (replace_awesomebar()) {
+			take_over_navbar_search();
+			$(document).on("page-change", take_over_navbar_search);
+			// replaces Frappe's own Ctrl+G ("Open Awesomebar"), which focused the search box
+			frappe.ui.keys.add_shortcut({
+				shortcut: "ctrl+g",
+				action: () => frappe.kard_start.toggle(),
+				description: __("Search"),
+				ignore_inputs: true,
+			});
+		}
+
+		if (type_to_search_allowed()) {
+			document.addEventListener("keydown", on_type_anywhere);
+		}
 	});
 })();
