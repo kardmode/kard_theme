@@ -1097,7 +1097,7 @@ $.extend(frappe.desktop, {
 		if (!Array.isArray(modules)) return document.createElement('div');
 
 		let desktop_icons_id = document.createElement('div');
-		desktop_icons_id.setAttribute("class", "desktop-icons");
+		desktop_icons_id.setAttribute("class", "desktop-icons kt-desktop-bookmarks");
 
 		if (title) {
 			let title_div = document.createElement('div');
@@ -1123,7 +1123,7 @@ $.extend(frappe.desktop, {
 			let label = m.label || "";
 
 			let label_wrapper = '<a class="kt-case-wrapper" title="' + frappe.utils.escape_html(label + ' ' + (m.type || "")) + '" data-id="' + m.name + '" data-name="' + m.link_to + '" data-link="' + m.route + '" href="' + m.route + '" target="_blank">'
-				+ '<div class="kt-app-icon" ' + color_style + '>'
+				+ '<div class="kt-app-icon kt-bookmark-icon" ' + color_style + '>'
 				+ `<svg class="icon icon-lg"><use href="#icon-` + icon + `"></use></svg>`
 				+ '<div class="circle module-notis hide" data-doctype="' + m.link_to + '"><span class="circle-text"></span></div>'
 				+ '<div class="circle module-remove hide"><div class="circle-text"><b>&times;</b></div></div>'
@@ -1145,7 +1145,7 @@ $.extend(frappe.desktop, {
 
 	render_workspace_icons: function (title) {
 		let desktop_icons_id = document.createElement('div');
-		desktop_icons_id.setAttribute("class", "desktop-icons");
+		desktop_icons_id.setAttribute("class", "desktop-icons kt-desktop-workspaces");
 		let title_div = document.createElement('div');
 		title_div.className = "sidebar-section-title";
 		title_div.innerHTML = title;
@@ -1165,13 +1165,13 @@ $.extend(frappe.desktop, {
 					let name = String(m.name || "").replace(/\s+/g, '-').toLowerCase();
 					let iconVariable = 'icon-' + (m.icon || 'folder-normal');
 					m.route = frappe.desktop.app_url(name);
-					let color = m.kard_theme_color || m.color;
+					let color = m.kard_theme_color || m.color || m.indicator_color || "";
 					let color_style = color ? `style="background-color:${color}"` : "";
 					let icon = m.icon || 'folder-normal';
 					let label = m.title;
 
 					let label_wrapper = '<a class="kt-case-wrapper" title="' + frappe.utils.escape_html(label) + '" data-name="' + name + '" data-link="' + m.route + '" href="' + m.route + '" target="_blank">'
-						+ '<div class="kt-app-icon" ' + color_style + '>'
+						+ '<div class="kt-app-icon kt-workspace-icon" ' + color_style + '>'
 						+ `<svg class="icon icon-lg"><use href="#icon-` + icon + `"></use></svg>`
 						+ '<div class="circle module-notis hide" data-doctype="' + name + '"><span class="circle-text"></span></div>'
 						+ '<div class="circle module-remove hide"><div class="circle-text"><b>&times;</b></div></div>'

@@ -350,6 +350,17 @@ body.kard-start-open {
 	border: 1px solid rgba(0, 0, 0, 0.06);
 	--icon-stroke: var(--text-color, #1f272e);
 }
+/* Bookmarks in Start menu: maintain crisp dark stroke & fill on pastel backgrounds (matching desktop) */
+.kard-start .ks-bookmarks .ks-tile-icon {
+	--icon-stroke: #0f172a;
+	--icon-fill: #0f172a;
+	color: #0f172a;
+}
+.kard-start .ks-bookmarks .ks-tile-icon .icon {
+	--icon-stroke: #0f172a;
+	fill: var(--icon-fill, #0f172a);
+	color: #0f172a;
+}
 .kard-start .ks-tile-label {
 	font-size: 12px;
 	line-height: 1.25;

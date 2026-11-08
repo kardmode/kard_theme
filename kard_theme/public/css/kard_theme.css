@@ -379,6 +379,21 @@ body.kard-sidebar-open {
   padding: 4px 1px;
 }
 
+#shorcuts {
+  margin-bottom: 32px;
+  display: block;
+  clear: both;
+}
+
+#shorcuts .desktop-icons {
+  margin-bottom: 24px;
+}
+
+#shorcuts .desktop-icons:last-of-type,
+#shorcuts .desktop-icons:last-child {
+  margin-bottom: 0;
+}
+
 .icon-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
@@ -479,6 +494,50 @@ body.kard-sidebar-open {
   display: inline-block;
   transition: 0.2s;
   text-shadow: none;
+}
+
+/* Bookmarks on desktop: solid dark stroke & fill on pastel backgrounds */
+.kt-app-icon.kt-bookmark-icon,
+.kt-desktop-bookmarks .kt-app-icon {
+  --icon-stroke: #0f172a;
+  --icon-fill: #0f172a;
+  color: #0f172a;
+}
+
+.kt-app-icon.kt-bookmark-icon .icon,
+.kt-desktop-bookmarks .kt-app-icon .icon {
+  --icon-stroke: #0f172a;
+  fill: var(--icon-fill, #0f172a);
+  color: #0f172a;
+}
+
+/* Workspace icons on desktop: adaptive light & dark mode appearance */
+.kt-app-icon.kt-workspace-icon,
+.kt-desktop-workspaces .kt-app-icon {
+  background-color: var(--card-bg, var(--bg-color, #f1f5f9));
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.06));
+  --icon-stroke: var(--text-color, #1f272e);
+  color: var(--text-color, #1f272e);
+}
+
+.kt-app-icon.kt-workspace-icon .icon,
+.kt-desktop-workspaces .kt-app-icon .icon {
+  --icon-stroke: var(--text-color, #1f272e);
+  color: var(--text-color, #1f272e);
+}
+
+[data-theme="dark"] .kt-app-icon.kt-workspace-icon,
+[data-theme="dark"] .kt-desktop-workspaces .kt-app-icon {
+  background-color: var(--card-bg, #1c2126);
+  border-color: var(--border-color, rgba(255, 255, 255, 0.08));
+  --icon-stroke: var(--text-color, #f8fafc);
+  color: var(--text-color, #f8fafc);
+}
+
+[data-theme="dark"] .kt-app-icon.kt-workspace-icon .icon,
+[data-theme="dark"] .kt-desktop-workspaces .kt-app-icon .icon {
+  --icon-stroke: var(--text-color, #f8fafc);
+  color: var(--text-color, #f8fafc);
 }
 
 .kt-case-label {
