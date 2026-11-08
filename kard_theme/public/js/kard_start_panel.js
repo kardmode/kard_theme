@@ -202,9 +202,15 @@ frappe.provide("frappe.kard_start");
 		}
 	}
 
+	// Unsaved new forms (Form/<doctype>/new or new-<doctype>-xxxx) don't survive a reload, so never keep them.
+	function is_unsaved_form(route) {
+		const name = String(route[2] || "");
+		return route[0] === "Form" && route[1] !== route[2] && (name === "new" || name.startsWith("new-"));
+	}
+
 	function record_recent_route(route) {
 		if (!Array.isArray(route) || !route.length) return;
-		if (!describe_route(route)) return;
+		if (is_unsaved_form(route) || !describe_route(route)) return;
 		try {
 			const key = route.join("/");
 			const stored = get_stored_recent_routes().filter((r) => Array.isArray(r) && r.join("/") !== key);
@@ -221,7 +227,7 @@ frappe.provide("frappe.kard_start");
 		const stored = get_stored_recent_routes();
 		const all = [...history, ...stored];
 		for (const route of all) {
-			if (!Array.isArray(route) || !route.length) continue;
+			if (!Array.isArray(route) || !route.length || is_unsaved_form(route)) continue;
 			const key = route.join("/");
 			if (seen.has(key)) continue;
 			seen.add(key);
@@ -1621,17 +1627,13 @@ frappe.provide("frappe.kard_start");
 		setTimeout(ensure_start_button, 0);
 		$(document).on("page-change", () => setTimeout(ensure_start_button, 0));
 
-		// Persist Recent routes across page reloads
+		// Persist Recent routes across page reloads (router "change" fires once per navigation)
 		if (frappe.router && frappe.router.on) {
 			frappe.router.on("change", () => {
 				const r = frappe.get_route();
 				if (r && r.length) record_recent_route(r);
 			});
 		}
-		$(document).on("page-change", () => {
-			const r = frappe.get_route();
-			if (r && r.length) record_recent_route(r);
-		});
 		setTimeout(() => {
 			const r = frappe.get_route();
 			if (r && r.length) record_recent_route(r);
