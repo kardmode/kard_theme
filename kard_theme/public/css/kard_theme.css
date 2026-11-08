@@ -496,18 +496,18 @@ body.kard-sidebar-open {
   text-shadow: none;
 }
 
-/* Bookmarks on desktop: solid dark stroke & fill on pastel backgrounds */
+/* Bookmarks on desktop: solid dark stroke outlines on tinted backgrounds */
 .kt-app-icon.kt-bookmark-icon,
 .kt-desktop-bookmarks .kt-app-icon {
   --icon-stroke: #0f172a;
-  --icon-fill: #0f172a;
+  --icon-fill: none;
   color: #0f172a;
 }
 
 .kt-app-icon.kt-bookmark-icon .icon,
 .kt-desktop-bookmarks .kt-app-icon .icon {
   --icon-stroke: #0f172a;
-  fill: var(--icon-fill, #0f172a);
+  fill: none;
   color: #0f172a;
 }
 
