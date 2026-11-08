@@ -153,6 +153,7 @@ frappe.provide("frappe.kard_start");
 				make_item("workspace", ws.name, __(ws.title || ws.name), ws.module,
 					ws.public ? ["Workspaces", ws.name] : ["Workspaces", "private", ws.title || ws.name], {
 					icon: ws.icon,
+					color: ws.kard_theme_color || ws.color || ws.indicator_color || "",
 					is_private: ws.public ? 0 : 1,
 				})
 			);

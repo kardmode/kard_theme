@@ -193,7 +193,8 @@ $(document).ready(function () {
 
 
 
-// The Start menu (kard_start*.js) replaces the workspace drawer and the mini-sidebar rail.
+// The Start menu (kard_start*.js) replaces the workspace drawer. The mini-sidebar rail can stay
+// alongside it: the grid button at the top of the rail (or in the navbar on small screens) opens it.
 function kard_start_on() {
 	return !!(frappe.kard_start && frappe.kard_start.is_enabled && frappe.kard_start.is_enabled());
 }
@@ -295,7 +296,7 @@ $.extend(frappe.desktop, {
 
 
 		// Hide default sidebar if mini sidebar is enabled and we are on a Workspace page
-		if (frappe.boot.kard_settings.enable_new_global_sidebar && !kard_start_on()) {
+		if (frappe.boot.kard_settings.enable_new_global_sidebar) {
 			document.body.classList.add('mini-sidebar-enabled');
 		} else {
 			document.body.classList.remove('mini-sidebar-enabled');
@@ -303,8 +304,8 @@ $.extend(frappe.desktop, {
 	},
 
 	initializeGlobalSidebar: function () {
-		// The rail is off when the Start menu is on (workspaces live in the panel instead)
-		const wants_rail = frappe.boot.kard_settings.enable_new_global_sidebar == 1 && !kard_start_on();
+		// Mini sidebar setting (with or without the Start menu)
+		const wants_rail = frappe.boot.kard_settings.enable_new_global_sidebar == 1;
 		if (!wants_rail) {
 			const rail = document.getElementById('mini-sidebar');
 			if (rail) rail.remove();
@@ -552,10 +553,11 @@ $.extend(frappe.desktop, {
 
 			sidebar.innerHTML = '';
 
-			// Add Global Sidebar Button
+			// Add Global Sidebar Button (opens the Start menu when that's on; the navbar's copy
+			// of this button only shows at phone / tablet widths, where the rail is hidden)
 			let globalBtn = document.createElement('div');
 			globalBtn.className = 'mini-sidebar-item';
-			globalBtn.setAttribute('data-label', 'Open Sidebar');
+			globalBtn.setAttribute('data-label', kard_start_on() ? __('Start') : 'Open Sidebar');
 			globalBtn.onclick = function () {
 				openSidebar();
 			};

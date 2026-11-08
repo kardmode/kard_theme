@@ -27,7 +27,13 @@
   "module_view_section_section",
   "enable_dynamic_module_view",
   "check_workspace_btns",
-  "enable_new_global_sidebar"
+  "enable_new_global_sidebar",
+  "start_menu_section",
+  "enable_start_menu",
+  "start_replace_awesomebar",
+  "start_type_to_search",
+  "start_menu_column_break",
+  "start_menu_shortcut"
  ],
  "fields": [
   {
@@ -155,12 +161,53 @@
    "default": "0",
    "fieldname": "enable_new_global_sidebar",
    "fieldtype": "Check",
-   "label": "enable_new_global_sidebar"
+   "label": "Enable Mini Sidebar",
+   "description": "A narrow bar of workspace icons down the left edge. Works with or without the Start menu."
+  },
+  {
+   "fieldname": "start_menu_section",
+   "fieldtype": "Section Break",
+   "label": "Start Menu"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_start_menu",
+   "fieldtype": "Check",
+   "label": "Enable Start Menu",
+   "description": "One panel for bookmarks, workspaces, every DocType and Report, and search. Replaces the workspace drawer."
+  },
+  {
+   "default": "1",
+   "depends_on": "enable_start_menu",
+   "fieldname": "start_replace_awesomebar",
+   "fieldtype": "Check",
+   "label": "Open Start Menu from the Search Box and Ctrl+G",
+   "description": "Off: the search box keeps Frappe's own search dropdown."
+  },
+  {
+   "default": "1",
+   "depends_on": "enable_start_menu",
+   "fieldname": "start_type_to_search",
+   "fieldtype": "Check",
+   "label": "Allow Type Anywhere to Search",
+   "description": "Typing with nothing selected opens search. Each user can still switch it off for themselves."
+  },
+  {
+   "fieldname": "start_menu_column_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "alt+q",
+   "depends_on": "enable_start_menu",
+   "fieldname": "start_menu_shortcut",
+   "fieldtype": "Data",
+   "label": "Start Menu Shortcut",
+   "description": "For example alt+q. Avoid ctrl+space: it switches keyboard language on some computers."
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2025-12-09 05:17:27.798572",
+ "modified": "2026-11-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Kard Theme",
  "name": "Kard Theme Settings",

@@ -133,21 +133,37 @@ def clear_app_index(doc=None, method=None):
 	frappe.cache().delete_value([APP_INDEX_KEY, APP_INDEX_VERSION_KEY])
 
 
+def get_start_settings():
+	"""
+	Site-wide Start menu switches, from Kard Theme Settings > Start Menu. (They used to be site_config
+	keys; the patch copy_start_menu_site_config moved them over.) Defaults apply until the fields exist.
+	"""
+	s = frappe.get_cached_doc("Kard Theme Settings")
+
+	def check(field, default):
+		value = s.get(field)
+		return default if value is None else cint(value)
+
+	return {
+		"enabled": check("enable_start_menu", 0),
+		"shortcut": (s.get("start_menu_shortcut") or "alt+q").strip().lower(),
+		# navbar search box + Ctrl+G open the panel instead of the awesomebar dropdown
+		"replace_awesomebar": check("start_replace_awesomebar", 1),
+		# typing with nothing focused opens the panel (each user can switch it off)
+		"type_to_search": check("start_type_to_search", 1),
+	}
+
+
 def extend_bootinfo(bootinfo):
 	"""Runs on every desk load (not cached with boot), so the flag and version are always fresh."""
 	if frappe.session.user == "Guest":
 		return
-	bootinfo.kard_start = {
-		"enabled": cint(frappe.conf.get("kard_start_menu")),
-		"shortcut": frappe.conf.get("kard_start_shortcut") or "alt+q",
-		# navbar search box + Ctrl+G open the panel instead of the awesomebar dropdown
-		"replace_awesomebar": cint(frappe.conf.get("kard_start_replace_awesomebar", 1)),
-		# typing with nothing focused opens the panel (each user can switch it off)
-		"type_to_search": cint(frappe.conf.get("kard_start_type_to_search", 1)),
+	bootinfo.kard_start = dict(
+		get_start_settings(),
 		# per-user options (site_config sets the default): type_to_search, show_lists, search_everywhere
-		"prefs": get_start_prefs(),
-		"app_index_version": get_app_index_version(),
-	}
+		prefs=get_start_prefs(),
+		app_index_version=get_app_index_version(),
+	)
 
 
 # --- Start menu bookmarks (Kard Desktop Icon) --------------------------------

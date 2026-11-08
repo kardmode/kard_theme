@@ -98,12 +98,18 @@ body.kard-start-open {
 }
 .kard-start .ks-tab {
 	flex: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	min-width: 0;
 	padding: 6px 10px;
 	border: 1px solid var(--border-color);
 	border-radius: 8px;
 	background: transparent;
 	color: var(--text-muted);
 	font-weight: 500;
+	--icon-stroke: currentColor;
 }
 .kard-start .ks-tab.active {
 	background: var(--primary, #2490ef);
@@ -152,7 +158,7 @@ body.kard-start-open {
 	color: var(--text-muted);
 	padding: 10px 8px 6px;
 }
-/* DocTypes | Reports switch at the top of the right column */
+/* list tabs at the top of the right column: icons (name as tooltip), the open one also shows its name */
 .kard-start .ks-list-tabs {
 	position: sticky;
 	top: -4px;
@@ -164,12 +170,14 @@ body.kard-start-open {
 	background: var(--card-bg, #fff);
 }
 .kard-start .ks-list-tab {
-	flex: 1;
+	flex: none;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	gap: 6px;
+	gap: 5px;
+	min-width: 0;
 	padding: 5px 8px;
+	--icon-stroke: currentColor;
 	border: 1px solid var(--border-color);
 	border-radius: 8px;
 	background: transparent;
@@ -178,12 +186,28 @@ body.kard-start-open {
 	font-weight: 600;
 }
 .kard-start .ks-list-tab.active {
+	flex: 1 1 auto;
 	background: var(--bg-color, #f4f5f6);
 	border-color: var(--text-muted);
 	color: var(--text-color);
 }
-.kard-start[data-list="reports"] .ks-apps-list .ks-tag {
-	display: none; /* every row is a report here; search results keep the tag */
+.kard-start .ks-list-tab:hover,
+.kard-start .ks-list-tab:focus-visible {
+	color: var(--text-color);
+	outline: none;
+}
+.kard-start .ks-tab-label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.kard-start .ks-list-tab:not(.active) .ks-tab-label,
+.kard-start .ks-tab:not(.active) .ks-tab-label {
+	display: none;
+}
+/* every row in these tabs is the same kind; DocTypes keeps it (Tree rows), search results too */
+.kard-start:not([data-list="doctypes"]) .ks-apps-list .ks-tag {
+	display: none;
 }
 .kard-start .ks-count {
 	font-weight: 400;
@@ -315,6 +339,7 @@ body.kard-start-open {
 	outline: none;
 }
 .kard-start .ks-tile-icon {
+	position: relative;
 	width: 44px;
 	height: 44px;
 	display: flex;
@@ -323,7 +348,7 @@ body.kard-start-open {
 	border-radius: 12px;
 	background: var(--bg-color, #f4f5f6);
 	border: 1px solid rgba(0, 0, 0, 0.06);
-	--icon-stroke: #1f272e;
+	--icon-stroke: var(--text-color, #1f272e);
 }
 .kard-start .ks-tile-label {
 	font-size: 12px;
@@ -461,16 +486,16 @@ body.kard-start-open {
 .kard-start .ks-tile {
 	position: relative;
 }
-.kard-start.ks-editing .ks-tiles {
+.kard-start.ks-editing .ks-bookmarks .ks-tiles {
 	min-height: 64px;
 	padding: 4px;
 	border: 1px dashed var(--border-color);
 	border-radius: 10px;
 }
-.kard-start.ks-editing .ks-tile {
+.kard-start.ks-editing .ks-bookmarks .ks-tile {
 	cursor: grab;
 }
-.kard-start.ks-editing .ks-tile-icon {
+.kard-start.ks-editing .ks-bookmarks .ks-tile-icon {
 	animation: ks-wiggle 0.35s ease-in-out infinite alternate;
 }
 @keyframes ks-wiggle {
@@ -478,7 +503,7 @@ body.kard-start-open {
 	to { transform: rotate(1.5deg); }
 }
 @media (prefers-reduced-motion: reduce) {
-	.kard-start.ks-editing .ks-tile-icon {
+	.kard-start.ks-editing .ks-bookmarks .ks-tile-icon {
 		animation: none;
 	}
 }
@@ -563,41 +588,31 @@ body.kard-start-open {
 	outline: none;
 }
 
-/* workspaces: compact chips under Bookmarks */
+/* workspaces: tiles matching bookmarks */
 .kard-start .ks-workspaces {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-	gap: 2px 6px;
+	grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+	gap: 4px;
 	margin-bottom: 6px;
 }
-.kard-start .ks-chip {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	min-width: 0;
-	padding: 6px 8px;
-	border-radius: 8px;
-	color: var(--text-color);
-	text-decoration: none;
-}
-.kard-start .ks-chip:hover,
-.kard-start .ks-chip:focus-visible {
-	background: var(--ks-row-hover);
-	text-decoration: none;
-	outline: none;
-}
-.kard-start .ks-chip-label {
-	flex: 1 1 auto;
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	font-size: 13px;
-}
-.kard-start .ks-chip-private {
-	flex: none;
+.kard-start .ks-tile-private {
+	position: absolute;
+	right: -3px;
+	bottom: -3px;
+	width: 16px;
+	height: 16px;
 	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	background: var(--card-bg, #fff);
+	border: 1px solid rgba(0, 0, 0, 0.08);
 	color: var(--text-muted);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+.kard-start .ks-tile-private svg {
+	width: 10px;
+	height: 10px;
 }
 
 /* pin star in All apps rows */
@@ -708,8 +723,9 @@ body.kard-start-open {
 	outline: none;
 }
 
-/* Start button visible at all widths when the panel is on */
-body.kard-start-enabled #globalmenu,
+/* Start button in the navbar: all widths, unless the mini sidebar is on (then the rail has the
+   button and the navbar's shows on small screens only, through its visible-sm / visible-xs classes) */
+body.kard-start-enabled:not(.mini-sidebar-enabled) #globalmenu,
 #kard-start-btn {
 	display: inline-flex !important;
 	align-items: center;
@@ -754,8 +770,7 @@ body.kard-start-enabled #globalmenu,
 	}
 }
 
-/* With the Start menu on, the mini-sidebar rail isn't drawn (workspaces are in the panel);
-   keep Frappe's workspace sidebar hidden as the rail did. */
+/* With the Start menu on, workspaces are in the panel: keep Frappe's workspace sidebar hidden. */
 body.kard-start-enabled #page-Workspaces .layout-side-section {
 	display: none !important;
 }
@@ -868,8 +883,12 @@ body.kard-start-enabled #navbar-search[readonly] {
 		display: none;
 	}
 	.kard-start .ks-tab {
-		padding: 6px 4px;
+		flex: none;
+		padding: 6px 10px;
 		font-size: 13px;
+	}
+	.kard-start .ks-tab.active {
+		flex: 1 1 auto;
 	}
 	.kard-start .ks-letter {
 		top: -4px;

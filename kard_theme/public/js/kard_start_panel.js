@@ -2,8 +2,8 @@
 //
 // Empty query:
 //   left:  Bookmarks (Kard Desktop Icon tiles) · Workspaces · Recent
-//   right: DocTypes | Reports tabs — Pinned entries (Kard Pinned Entry) on top, then A–Z
-//          (DocTypes also holds settings, trees, pages and dashboards)
+//   right: icon tabs DocTypes (with tree views) | Reports | Settings | Pages | Dashboards —
+//          Pinned entries (Kard Pinned Entry) on top, then A–Z
 // Typing: a simple ranked list over apps + bookmarks + workspaces. Record
 // search, sections and the awesomebar takeover come in later steps.
 //
@@ -26,6 +26,16 @@ frappe.provide("frappe.kard_start");
 		dashboard: { tag: __("Dashboard"), icon: "dashboard" },
 		bookmark: { tag: __("Bookmark"), icon: "star" },
 	};
+	// The lists on the right, one tab each (icon, with the name as tooltip; the open tab also shows
+	// it). Tree views stay with DocTypes; workspaces have their own section on the left.
+	const LIST_TABS = [
+		{ id: "doctypes", label: __("DocTypes"), icon: "list", match: (i) => (i.type === "doctype" && !i.is_single) || i.type === "tree" },
+		{ id: "reports", label: __("Reports"), icon: "chart", match: (i) => i.type === "report" },
+		{ id: "settings", label: __("Settings"), icon: "setting-gear", match: (i) => i.type === "doctype" && !!i.is_single },
+		{ id: "pages", label: __("Pages"), icon: "tool", match: (i) => i.type === "page" },
+		{ id: "dashboards", label: __("Dashboards"), icon: "dashboard", match: (i) => i.type === "dashboard" },
+	];
+	const list_tab_def = (id) => LIST_TABS.find((t) => t.id === id) || LIST_TABS[0];
 	const RESULT_LIMIT = 40;
 	// no hover on touch screens: rows keep their own ⋯ button there
 	const TOUCH = !!(window.matchMedia && window.matchMedia("(hover: none)").matches);
@@ -37,6 +47,12 @@ frappe.provide("frappe.kard_start");
 	const wants_new_tab = (e) => e && (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1);
 	const route_url = (route) =>
 		frappe.kard_start.item_url({ route: Array.isArray(route) ? route : [route] });
+
+	function list_tab_button(cls, t, attrs) {
+		return `<button class="${cls}" data-list="${t.id}" ${attrs || ""} role="tab" title="${esc(t.label)}" aria-label="${esc(t.label)}">
+			${icon(t.icon, "sm")}<span class="ks-tab-label">${esc(t.label)}</span>
+		</button>`;
+	}
 
 	function type_info(item) {
 		if (item.type === "doctype" && item.is_single) return TYPE_INFO.single;
@@ -315,9 +331,9 @@ frappe.provide("frappe.kard_start");
 			this.results = [];
 			this.active = 0;
 			this.tab = "home"; // phone: home (bookmarks) | list
-			this.list_tab = "doctypes"; // doctypes | reports
+			this.list_tab = "doctypes"; // a LIST_TABS id
 			try {
-				if (localStorage.getItem("kard_start_list_tab") === "reports") this.list_tab = "reports";
+				this.list_tab = list_tab_def(localStorage.getItem("kard_start_list_tab")).id;
 			} catch (e) {
 				// storage unavailable: default tab
 			}
@@ -339,9 +355,8 @@ frappe.provide("frappe.kard_start");
 						<button class="ks-close" aria-label="${esc(__("Close"))}">${icon("close")}</button>
 					</div>
 					<div class="ks-tabs" role="tablist">
-						<button class="ks-tab" data-tab="home" role="tab">${esc(__("Bookmarks"))}</button>
-						<button class="ks-tab" data-tab="list" data-list="doctypes" role="tab">${esc(__("DocTypes"))}</button>
-						<button class="ks-tab" data-tab="list" data-list="reports" role="tab">${esc(__("Reports"))}</button>
+						<button class="ks-tab" data-tab="home" role="tab" title="${esc(__("Bookmarks"))}" aria-label="${esc(__("Bookmarks"))}">${icon("star", "sm")}<span class="ks-tab-label">${esc(__("Bookmarks"))}</span></button>
+						${LIST_TABS.map((t) => list_tab_button("ks-tab", t, `data-tab="list"`)).join("")}
 					</div>
 					<div class="ks-body">
 						<section class="ks-side">
@@ -354,14 +369,13 @@ frappe.provide("frappe.kard_start");
 							</div>
 							<div class="ks-bookmarks"></div>
 							<div class="ks-section-title ks-ws-title">${esc(__("Workspaces"))}</div>
-							<div class="ks-workspaces"></div>
+							<div class="ks-workspaces ks-tiles"></div>
 							<div class="ks-section-title ks-recent-title">${esc(__("Recent"))}</div>
 							<div class="ks-recent"></div>
 						</section>
 						<section class="ks-apps">
 							<div class="ks-list-tabs" role="tablist">
-								<button class="ks-list-tab" data-list="doctypes" role="tab">${esc(__("DocTypes"))} <span class="ks-count"></span></button>
-								<button class="ks-list-tab" data-list="reports" role="tab">${esc(__("Reports"))} <span class="ks-count"></span></button>
+								${LIST_TABS.map((t) => list_tab_button("ks-list-tab", t)).join("")}
 								<button class="ks-list-hide" data-action="toggle-lists" title="${esc(__("Hide lists"))}" aria-label="${esc(__("Hide lists"))}">${icon("sidebar-collapse", "sm")}</button>
 							</div>
 							<div class="ks-apps-list"></div>
@@ -1052,13 +1066,20 @@ frappe.provide("frappe.kard_start");
 			}
 			this.lists_stale = false;
 			// workspaces have their own section on the left; they stay searchable
-			const is_report = (i) => i.type === "report";
-			const all = this.catalogue.filter((i) => i.type !== "workspace");
-			const counts = { doctypes: all.filter((i) => !is_report(i)).length, reports: all.filter(is_report).length };
-			this.$el.find(".ks-list-tab").each((i, b) => {
-				$(b).find(".ks-count").text(counts[b.dataset.list] || "");
+			const counts = {};
+			LIST_TABS.forEach((t) => (counts[t.id] = this.catalogue.filter(t.match).length));
+			// a tab with nothing in it (e.g. no dashboards) isn't shown; fall back to the first that has items
+			if (!counts[this.list_tab]) {
+				const first = LIST_TABS.find((t) => counts[t.id]);
+				if (first) this.list_tab = first.id;
+			}
+			this.$el.find(".ks-list-tab, .ks-tab[data-list]").each((i, b) => {
+				const n = counts[b.dataset.list] || 0;
+				const name = `${list_tab_def(b.dataset.list).label} (${n})`;
+				$(b).toggle(!!n).attr({ title: name, "aria-label": name });
 			});
-			const apps = all.filter((i) => (this.list_tab === "reports" ? is_report(i) : !is_report(i)));
+			this.sync_tabs();
+			const apps = this.catalogue.filter(list_tab_def(this.list_tab).match);
 
 			// One section per letter. `content-visibility: auto` (CSS) lets the browser skip
 			// layout/paint for sections that are off-screen; the size hint keeps the scrollbar right.
@@ -1215,13 +1236,15 @@ frappe.provide("frappe.kard_start");
 		render_workspaces() {
 			const ws = get_workspaces(this.catalogue);
 			this.$el.find(".ks-ws-title").toggle(!!ws.length);
-			this.$el.find(".ks-workspaces").html(
+			this.$el.find(".ks-workspaces").toggle(!!ws.length).html(
 				ws
 					.map(
-						(w) => `<a href="${esc(frappe.kard_start.item_url(w))}" class="ks-chip" data-app-key="${esc(w.key)}" data-item-key="${esc(w.key)}" title="${esc(w.label)}">
-							<span class="ks-row-icon">${icon(w.icon || "folder-normal")}</span>
-							<span class="ks-chip-label">${esc(w.label)}</span>
-							${w.is_private ? `<span class="ks-chip-private" title="${esc(__("Private"))}">${icon("lock", "xs")}</span>` : ""}
+						(w) => `<a href="${esc(frappe.kard_start.item_url(w))}" class="ks-tile" data-app-key="${esc(w.key)}" data-item-key="${esc(w.key)}" title="${esc(w.label)}">
+							<span class="ks-tile-icon" ${w.color ? `style="background-color:${esc(w.color)}"` : ""}>
+								${icon(w.icon || "folder-normal", "md")}
+								${w.is_private ? `<span class="ks-tile-private" title="${esc(__("Private"))}">${icon("lock", "xs")}</span>` : ""}
+							</span>
+							<span class="ks-tile-label">${esc(w.label)}</span>
 						</a>`
 					)
 					.join("")
@@ -1530,11 +1553,15 @@ frappe.provide("frappe.kard_start");
 	});
 
 	function ensure_start_button() {
-		// kard_theme's grid button (#globalmenu) becomes the Start button at all widths;
-		// add our own if the theme's sidebar features are switched off.
+		// kard_theme's grid button (#globalmenu) becomes the Start button. With the mini sidebar on
+		// it stays small-screens only (the rail's own grid button opens Start on wider ones);
+		// without it, it shows at all widths. Add our own if the theme's sidebar features are off.
 		let btn = document.getElementById("globalmenu");
 		if (btn) {
-			btn.classList.remove("visible-sm", "visible-xs");
+			const rail_on = cint((frappe.boot.kard_settings || {}).enable_new_global_sidebar);
+			if (!rail_on) {
+				btn.classList.remove("visible-sm", "visible-xs");
+			}
 			btn.setAttribute("title", __("Start"));
 			return;
 		}
