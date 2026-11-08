@@ -171,24 +171,8 @@ frappe.provide("frappe.kard_start");
 
 	// ------------------------------------------------------------------ recent
 
-	function get_recent() {
-		const current = (frappe.get_route() || []).join("/");
-		const seen = new Set([current]);
-		const out = [];
-		const history = (frappe.route_history || []).slice().reverse();
-		for (const route of history) {
-			if (!Array.isArray(route) || !route.length) continue;
-			const key = route.join("/");
-			if (seen.has(key)) continue;
-			seen.add(key);
-			const entry = describe_route(route);
-			if (entry) out.push(entry);
-			if (out.length >= 8) break;
-		}
-		return out;
-	}
-
 	function describe_route(route) {
+		if (!Array.isArray(route) || !route.length) return null;
 		const [r0, r1, r2] = route;
 		if (r0 === "Form" && r1 && r2) {
 			return r1 === r2
@@ -202,6 +186,50 @@ frappe.provide("frappe.kard_start");
 		if (r0 === "dashboard-view" && r1) return { label: __(r1), sub: __("Dashboard"), route, icon: "dashboard" };
 		if (r0 && !r1 && r0 !== "Workspaces") return { label: __(frappe.utils.to_title_case(r0.replace(/-/g, " "))), sub: __("Page"), route, icon: "tool" };
 		return null;
+	}
+
+	function recent_storage_key() {
+		return "kard_start:recent:" + ((frappe.session && frappe.session.user) || "default");
+	}
+
+	function get_stored_recent_routes() {
+		try {
+			const raw = localStorage.getItem(recent_storage_key());
+			const parsed = raw ? JSON.parse(raw) : [];
+			return Array.isArray(parsed) ? parsed : [];
+		} catch (e) {
+			return [];
+		}
+	}
+
+	function record_recent_route(route) {
+		if (!Array.isArray(route) || !route.length) return;
+		if (!describe_route(route)) return;
+		try {
+			const key = route.join("/");
+			const stored = get_stored_recent_routes().filter((r) => Array.isArray(r) && r.join("/") !== key);
+			stored.unshift(route);
+			localStorage.setItem(recent_storage_key(), JSON.stringify(stored.slice(0, 20)));
+		} catch (e) {}
+	}
+
+	function get_recent() {
+		const current = (frappe.get_route() || []).join("/");
+		const seen = new Set([current]);
+		const out = [];
+		const history = (frappe.route_history || []).slice().reverse();
+		const stored = get_stored_recent_routes();
+		const all = [...history, ...stored];
+		for (const route of all) {
+			if (!Array.isArray(route) || !route.length) continue;
+			const key = route.join("/");
+			if (seen.has(key)) continue;
+			seen.add(key);
+			const entry = describe_route(route);
+			if (entry) out.push(entry);
+			if (out.length >= 8) break;
+		}
+		return out;
 	}
 
 	// ------------------------------------------------------------------ search
@@ -1592,6 +1620,22 @@ frappe.provide("frappe.kard_start");
 		// kard_theme.js builds its navbar button on load / route change
 		setTimeout(ensure_start_button, 0);
 		$(document).on("page-change", () => setTimeout(ensure_start_button, 0));
+
+		// Persist Recent routes across page reloads
+		if (frappe.router && frappe.router.on) {
+			frappe.router.on("change", () => {
+				const r = frappe.get_route();
+				if (r && r.length) record_recent_route(r);
+			});
+		}
+		$(document).on("page-change", () => {
+			const r = frappe.get_route();
+			if (r && r.length) record_recent_route(r);
+		});
+		setTimeout(() => {
+			const r = frappe.get_route();
+			if (r && r.length) record_recent_route(r);
+		}, 300);
 
 		const shortcut = ((frappe.boot.kard_start && frappe.boot.kard_start.shortcut) || "alt+q").toLowerCase();
 		frappe.ui.keys.add_shortcut({
