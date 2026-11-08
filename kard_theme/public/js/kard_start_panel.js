@@ -85,7 +85,7 @@ frappe.provide("frappe.kard_start");
 
 	function bookmark_href(b) {
 		const link = b.link || "";
-		return link.startsWith("http") ? link : "/app/" + link.replace(/^\/?(app\/)?/, "");
+		return link.startsWith("http") ? link : frappe.desktop.app_url(link);
 	}
 
 	function open_bookmark(b) {
@@ -93,7 +93,7 @@ frappe.provide("frappe.kard_start");
 		if (link.startsWith("http")) {
 			window.open(link, "_blank", "noopener");
 		} else {
-			frappe.set_route(link.replace(/^\/?(app\/)?/, ""));
+			frappe.set_route(link.replace(/^\/?((app|desk)\/)?/, ""));
 		}
 	}
 
@@ -735,7 +735,7 @@ frappe.provide("frappe.kard_start");
 		add_bookmark(item) {
 			const args = pin_args(item);
 			if (!args) return;
-			const url = frappe.kard_start.item_url(item).replace(/^\/app\//, "");
+			const url = frappe.kard_start.item_url(item).replace(/^\/(app|desk)\//, "");
 			frappe
 				.xcall("kard_theme.api.add_bookmark", Object.assign({}, args, { label: item.label, url }))
 				.then(() => this.reload_bookmarks())

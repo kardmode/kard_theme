@@ -708,6 +708,12 @@ body.kard-start-enabled #globalmenu,
 	}
 }
 
+/* With the Start menu on, the mini-sidebar rail isn't drawn (workspaces are in the panel);
+   keep Frappe's workspace sidebar hidden as the rail did. */
+body.kard-start-enabled #page-Workspaces .layout-side-section {
+	display: none !important;
+}
+
 /* the navbar box is now just a button that opens the panel */
 body.kard-start-enabled #navbar-search[readonly] {
 	cursor: pointer;

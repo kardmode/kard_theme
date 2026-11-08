@@ -193,13 +193,36 @@ $(document).ready(function () {
 
 
 
+// The Start menu (kard_start*.js) replaces the workspace drawer and the mini-sidebar rail.
+function kard_start_on() {
+	return !!(frappe.kard_start && frappe.kard_start.is_enabled && frappe.kard_start.is_enabled());
+}
+
 $.extend(frappe.desktop, {
+	// Desk URL for a route path ("sales-order", "query-report/General Ledger"). Uses Frappe's
+	// router so the prefix is right on any version (/app in v14, /desk in v16).
+	app_url: function (path) {
+		const parts = String(path || "")
+			.replace(/^\/?(app|desk)(\/|$)/, "")
+			.split("/")
+			.filter(Boolean)
+			.map((p) => {
+				try {
+					return decodeURIComponent(p);
+				} catch (e) {
+					return p;
+				}
+			});
+		if (frappe.router && frappe.router.make_url) return frappe.router.make_url(parts);
+		return "/app/" + parts.map(encodeURIComponent).join("/");
+	},
+
 	refresh: function () {
 		const is_logged_in = frappe.session && frappe.session.user && frappe.session.user !== 'Guest';
 
 		if (!is_logged_in) {
-			// If we are on the Desk (/app) but identified as Guest, the session has expired.
-			if (window.location.pathname.includes('/app')) {
+			// If we are on the Desk (/app, /desk in v16) but identified as Guest, the session has expired.
+			if (/^\/(app|desk)(\/|$)/.test(window.location.pathname)) {
 				window.location.href = '/#login';
 			}
 			return;
@@ -272,7 +295,7 @@ $.extend(frappe.desktop, {
 
 
 		// Hide default sidebar if mini sidebar is enabled and we are on a Workspace page
-		if (frappe.boot.kard_settings.enable_new_global_sidebar) {
+		if (frappe.boot.kard_settings.enable_new_global_sidebar && !kard_start_on()) {
 			document.body.classList.add('mini-sidebar-enabled');
 		} else {
 			document.body.classList.remove('mini-sidebar-enabled');
@@ -280,8 +303,15 @@ $.extend(frappe.desktop, {
 	},
 
 	initializeGlobalSidebar: function () {
-		// Idempotent check
-		if (document.getElementById('globalmenu') && document.getElementById('mini-sidebar')) {
+		// The rail is off when the Start menu is on (workspaces live in the panel instead)
+		const wants_rail = frappe.boot.kard_settings.enable_new_global_sidebar == 1 && !kard_start_on();
+		if (!wants_rail) {
+			const rail = document.getElementById('mini-sidebar');
+			if (rail) rail.remove();
+		}
+
+		// Idempotent check (without the rail this used to fail every time and stack up listeners)
+		if (document.getElementById('globalmenu') && (!wants_rail || document.getElementById('mini-sidebar'))) {
 			frappe.desktop.updateActiveMiniSidebar();
 			return;
 		}
@@ -565,7 +595,7 @@ $.extend(frappe.desktop, {
 
 						let anchor = document.createElement('a');
 						anchor.className = 'mini-sidebar-item';
-						anchor.href = '/app/' + name;
+						anchor.href = frappe.desktop.app_url(name);
 						anchor.setAttribute('data-label', item.title);
 						anchor.setAttribute('data-workspace', item.name);
 						anchor.setAttribute('data-workspace-route', name);
@@ -620,18 +650,20 @@ $.extend(frappe.desktop, {
 			return;
 
 		if (frappe.boot.kard_settings.enable_module_sidebar === 1) {
-			if (frappe.boot.kard_settings.enable_new_global_sidebar == 1)
+			if (wants_rail)
 				renderMiniSidebar();
 
 			addGlobalSidebarButton();
-			// Event delegation for closing sidebar when overlay backdrop is clicked
-			document.body.addEventListener('click', function (event) {
-				var sidebar = document.getElementById('global-sidebar');
-				var overlay = document.querySelector('.workspace-overlay');
-				if (overlay && event.target.closest('.workspace-overlay')) {
-					closeSidebar();
-				}
-			});
+			// Event delegation for closing sidebar when overlay backdrop is clicked (attach once)
+			if (!frappe.desktop._overlay_click_bound) {
+				frappe.desktop._overlay_click_bound = true;
+				document.body.addEventListener('click', function (event) {
+					var overlay = document.querySelector('.workspace-overlay');
+					if (overlay && event.target.closest('.workspace-overlay')) {
+						frappe.desktop.closeSidebar && frappe.desktop.closeSidebar();
+					}
+				});
+			}
 
 		}
 	},
@@ -858,7 +890,7 @@ $.extend(frappe.desktop, {
 			items.forEach(entry => {
 				const listItem = document.createElement('li');
 				var aElement = document.createElement('a');
-				aElement.href = '/app/' + frappe.desktop.get_route_for_menu_links(entry);
+				aElement.href = frappe.desktop.app_url(frappe.desktop.get_route_for_menu_links(entry));
 				let label = entry.label;
 				aElement.title = label + ' ' + (entry.type || "");
 
@@ -1130,7 +1162,7 @@ $.extend(frappe.desktop, {
 					let type = String(m.type || "").toLowerCase();
 					let name = String(m.name || "").replace(/\s+/g, '-').toLowerCase();
 					let iconVariable = 'icon-' + (m.icon || 'folder-normal');
-					m.route = '/app/' + name;
+					m.route = frappe.desktop.app_url(name);
 					let color = m.kard_theme_color || m.color;
 					let color_style = color ? `style="background-color:${color}"` : "";
 					let icon = m.icon || 'folder-normal';

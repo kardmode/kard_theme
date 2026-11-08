@@ -212,7 +212,7 @@ frappe.provide("frappe.kard_start");
 			if (r[0] === "Workspaces") {
 				const is_private = r[1] === "private";
 				const name = is_private ? r[2] : r[1];
-				return "/app/" + (is_private ? "private/" : "") + frappe.router.slug(name || "");
+				return frappe.router.make_url((is_private ? ["private"] : []).concat([frappe.router.slug(name || "")]));
 			}
 			return frappe.router.make_url(frappe.router.convert_from_standard_route(r.slice()));
 		},
