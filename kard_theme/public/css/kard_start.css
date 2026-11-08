@@ -796,6 +796,10 @@ body.kard-start-enabled #navbar-search[readonly] {
 	outline: none;
 }
 
+.kard-start .ks-lists-toggle.on {
+	color: var(--primary, #2490ef);
+}
+
 /* options menu (footer ⋯) */
 .kard-start .ks-options button {
 	display: flex;

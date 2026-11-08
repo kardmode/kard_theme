@@ -362,7 +362,7 @@ frappe.provide("frappe.kard_start");
 							<div class="ks-list-tabs" role="tablist">
 								<button class="ks-list-tab" data-list="doctypes" role="tab">${esc(__("DocTypes"))} <span class="ks-count"></span></button>
 								<button class="ks-list-tab" data-list="reports" role="tab">${esc(__("Reports"))} <span class="ks-count"></span></button>
-								<button class="ks-list-hide" data-action="hide-lists" title="${esc(__("Hide these lists (bring them back from ⋯ Options)"))}" aria-label="${esc(__("Hide lists"))}">${icon("close", "xs")}</button>
+								<button class="ks-list-hide" data-action="toggle-lists" title="${esc(__("Hide lists"))}" aria-label="${esc(__("Hide lists"))}">${icon("sidebar-collapse", "sm")}</button>
 							</div>
 							<div class="ks-apps-list"></div>
 						</section>
@@ -517,7 +517,7 @@ frappe.provide("frappe.kard_start");
 					e.stopPropagation();
 					return this.show_options_menu(e.currentTarget);
 				}
-				if (action === "hide-lists") return set_pref("show_lists", false);
+				if (action === "toggle-lists") return set_pref("show_lists", !pref("show_lists"), { silent: true });
 				this.close();
 				if (action === "profile") frappe.set_route("Form", "User", frappe.session.user);
 				if (action === "theme") new frappe.ui.ThemeSwitcher().show();
@@ -1392,6 +1392,12 @@ frappe.provide("frappe.kard_start");
 					<span class="ks-user-name">${esc(frappe.session.user_fullname || frappe.session.user)}</span>
 				</a>
 				<span class="ks-footer-actions">
+					${(() => {
+						const shown = pref("show_lists");
+						const label = shown ? __("Hide DocTypes & Reports") : __("Show DocTypes & Reports");
+						return `<button class="ks-icon-btn ks-lists-toggle ${shown ? "on" : ""}" data-action="toggle-lists"
+							title="${esc(label)}" aria-label="${esc(label)}" aria-pressed="${shown ? "true" : "false"}">${icon(shown ? "sidebar-collapse" : "sidebar-expand")}</button>`;
+					})()}
 					<button class="ks-icon-btn" data-action="theme" title="${esc(__("Toggle theme"))}" aria-label="${esc(__("Toggle theme"))}"><svg class="icon icon-sm" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 2a6 6 0 0 1 0 12z" fill="currentColor"/></svg></button>
 					${is_sm ? `<button class="ks-icon-btn" data-action="settings" title="${esc(__("Kard Theme Settings"))}" aria-label="${esc(__("Kard Theme Settings"))}">${icon("setting-gear")}</button>` : ""}
 					<button class="ks-icon-btn" data-action="options" title="${esc(__("Start menu options"))}" aria-label="${esc(__("Start menu options"))}" aria-haspopup="menu">${icon("dot-horizontal")}</button>
@@ -1420,16 +1426,40 @@ frappe.provide("frappe.kard_start");
 
 	const PREF_MESSAGES = {
 		type_to_search: [__("Type anywhere to search is on"), __("Type anywhere to search is off")],
-		show_lists: [__("DocTypes & Reports lists are shown"), __("Lists hidden. Bring them back from ⋯ Options in the panel footer")],
+		show_lists: [__("DocTypes & Reports lists are shown"), __("DocTypes & Reports lists are hidden")],
 		search_everywhere: [__("\"Search everywhere\" is shown in results"), __("\"Search everywhere\" is hidden")],
 	};
 
-	function set_pref(name, on) {
+	// Saving: the UI changes at once; the server only gets the final value, ~0.5s after the last
+	// change and one request at a time (rapid toggles used to collide in the database).
+	const pref_saves = {};
+
+	function save_pref(name) {
+		const st = pref_saves[name];
+		if (st.in_flight) return; // saved again when the current request returns
+		const value = pref(name) ? 1 : 0;
+		if (value === st.saved) return;
+		st.in_flight = true;
+		frappe
+			.call({ method: "kard_theme.api.set_start_pref", args: { pref: name, enabled: value }, freeze: false })
+			.then(
+				() => (st.saved = value),
+				() => {}
+			)
+			.always(() => {
+				st.in_flight = false;
+				if ((pref(name) ? 1 : 0) !== st.saved) save_pref(name);
+			});
+	}
+
+	function set_pref(name, on, opts) {
 		const cfg = start_cfg();
+		const st = (pref_saves[name] = pref_saves[name] || { saved: pref(name) ? 1 : 0 });
 		frappe.boot.kard_start = Object.assign({}, cfg, { prefs: Object.assign({}, cfg.prefs || {}, { [name]: on ? 1 : 0 }) });
-		frappe.xcall("kard_theme.api.set_start_pref", { pref: name, enabled: on ? 1 : 0 });
+		clearTimeout(st.timer);
+		st.timer = setTimeout(() => save_pref(name), 500);
 		const msg = PREF_MESSAGES[name];
-		if (msg) frappe.show_alert({ message: on ? msg[0] : msg[1], indicator: on ? "green" : "orange" });
+		if (msg && !(opts && opts.silent)) frappe.show_alert({ message: on ? msg[0] : msg[1], indicator: on ? "green" : "orange" });
 		const p = frappe.kard_start._panel;
 		if (p) p.apply_prefs();
 	}
