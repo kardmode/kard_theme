@@ -25,11 +25,36 @@ def set_tabbed_forms(enabled):
 	frappe.clear_cache(user=frappe.session.user)
 
 
+# Per-user Start menu options (stored as user defaults, so they follow the user across devices).
+# pref name -> (user default key, site_config key for the site-wide default)
+START_PREFS = {
+	"type_to_search": ("kard_type_to_search", "kard_start_type_to_search"),
+	"show_lists": ("kard_start_show_lists", "kard_start_show_lists"),
+	"search_everywhere": ("kard_start_search_everywhere", "kard_start_search_everywhere"),
+}
+
+
+def get_start_prefs():
+	"""Effective on/off for each option: the user's own choice, else the site default (on)."""
+	prefs = {}
+	for pref, (user_key, site_key) in START_PREFS.items():
+		value = frappe.defaults.get_user_default(user_key)
+		prefs[pref] = cint(value) if value in ("0", "1") else cint(frappe.conf.get(site_key, 1))
+	return prefs
+
+
+@frappe.whitelist()
+def set_start_pref(pref, enabled):
+	if pref not in START_PREFS:
+		frappe.throw(frappe._("Unknown Start menu option {0}").format(pref))
+	frappe.defaults.set_user_default(START_PREFS[pref][0], "1" if cint(enabled) else "0", frappe.session.user)
+	return cint(enabled)
+
+
 @frappe.whitelist()
 def set_type_to_search(enabled):
 	"""Per-user switch for opening the Start panel by typing with nothing focused."""
-	frappe.defaults.set_user_default("kard_type_to_search", "1" if cint(enabled) else "0", frappe.session.user)
-	return cint(enabled)
+	return set_start_pref("type_to_search", enabled)
 
 
 @frappe.whitelist()
@@ -119,7 +144,8 @@ def extend_bootinfo(bootinfo):
 		"replace_awesomebar": cint(frappe.conf.get("kard_start_replace_awesomebar", 1)),
 		# typing with nothing focused opens the panel (each user can switch it off)
 		"type_to_search": cint(frappe.conf.get("kard_start_type_to_search", 1)),
-		"user_type_to_search": 0 if frappe.defaults.get_user_default("kard_type_to_search") == "0" else 1,
+		# per-user options (site_config sets the default): type_to_search, show_lists, search_everywhere
+		"prefs": get_start_prefs(),
 		"app_index_version": get_app_index_version(),
 	}
 

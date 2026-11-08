@@ -53,21 +53,24 @@ body.kard-start-open {
 
 /* search */
 .kard-start .ks-search {
+	--ks-search-pt: 14px;
+	--ks-input-h: 40px;
 	position: relative;
-	padding: 14px 16px 10px;
+	padding: var(--ks-search-pt) 16px 10px;
 	flex: none;
 }
+/* centred on the input itself (the box has more padding above than below) */
 .kard-start .ks-search > .icon {
 	position: absolute;
 	left: 28px;
-	top: 50%;
-	transform: translateY(-25%);
+	top: calc(var(--ks-search-pt) + var(--ks-input-h) / 2);
+	transform: translateY(-50%);
 	color: var(--text-muted);
 	pointer-events: none;
 }
 .kard-start .ks-input {
 	width: 100%;
-	height: 40px;
+	height: var(--ks-input-h);
 	padding: 0 14px 0 38px;
 	font-size: 15px;
 	border-radius: 10px;
@@ -332,6 +335,50 @@ body.kard-start-open {
 	-webkit-line-clamp: 2;
 	-webkit-box-orient: vertical;
 	word-break: break-word;
+}
+
+/* long lists: skip layout/paint for letter sections that are off-screen
+   (each section carries a contain-intrinsic-size hint from JS) */
+.kard-start .ks-sec {
+	content-visibility: auto;
+}
+
+/* shared + / ☆ / ⋯ toolbar, moved onto the hovered or keyboard-selected row */
+.kard-start .ks-row-actions {
+	display: none;
+	flex: none;
+	align-items: center;
+	gap: 2px;
+}
+.kard-start .ks-row:hover > .ks-row-actions,
+.kard-start .ks-row.active > .ks-row-actions,
+.kard-start .ks-row-actions:focus-within {
+	display: inline-flex;
+}
+.kard-start .ks-row-actions .ks-new,
+.kard-start .ks-row-actions .ks-star {
+	opacity: 1;
+}
+.kard-start .ks-row-actions .ks-more {
+	display: inline-flex;
+}
+/* ★ on pinned rows; the toolbar's star takes over while hovered */
+.kard-start .ks-pin-mark {
+	flex: none;
+	display: inline-flex;
+	padding: 0 4px;
+}
+.kard-start .ks-pin-mark .icon {
+	fill: #f2b544;
+	--icon-stroke: #e0a020;
+}
+.kard-start .ks-pin-mark.global .icon {
+	fill: #9db7d8;
+	--icon-stroke: #6f8fb8;
+}
+.kard-start .ks-row:hover > .ks-pin-mark,
+.kard-start .ks-row.active > .ks-pin-mark {
+	display: none;
 }
 
 /* search results */
@@ -688,13 +735,12 @@ body.kard-start-enabled #globalmenu,
 		display: none !important;
 	}
 	.kard-start.compact .ks-search {
+		--ks-search-pt: 8px;
+		--ks-input-h: 36px;
 		padding: 8px 12px;
 	}
 	.kard-start.compact .ks-search > .icon {
 		left: 24px;
-	}
-	.kard-start.compact .ks-input {
-		height: 36px;
 	}
 	.kard-start.compact .ks-results {
 		height: auto;
@@ -718,7 +764,48 @@ body.kard-start-enabled #page-Workspaces .layout-side-section {
 body.kard-start-enabled #navbar-search[readonly] {
 	cursor: pointer;
 }
-.kard-start .ks-tts.on {
+/* lists hidden (per-user option): one column, narrower panel */
+.kard-start.ks-no-lists .ks-apps {
+	display: none !important;
+}
+.kard-start.ks-no-lists .ks-body {
+	grid-template-columns: 1fr;
+}
+.kard-start.ks-no-lists:not(.compact) {
+	width: min(640px, calc(100vw - 32px));
+}
+.kard-start.ks-no-lists .ks-tabs {
+	display: none !important;
+}
+.kard-start .ks-list-hide {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	padding: 0;
+	border: none;
+	border-radius: 8px;
+	background: transparent;
+	color: var(--text-muted);
+}
+.kard-start .ks-list-hide:hover,
+.kard-start .ks-list-hide:focus-visible {
+	background: var(--ks-row-hover);
+	color: var(--text-color);
+	outline: none;
+}
+
+/* options menu (footer ⋯) */
+.kard-start .ks-options button {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.kard-start .ks-check {
+	flex: none;
+	display: inline-flex;
+	width: 16px;
 	color: var(--primary, #2490ef);
 }
 
@@ -756,9 +843,6 @@ body.kard-start-enabled #navbar-search[readonly] {
 		border-radius: 10px;
 		background: transparent;
 		color: var(--text-muted);
-	}
-	.kard-start .ks-search > .icon {
-		transform: translateY(-50%);
 	}
 	.kard-start .ks-body,
 	.kard-start .ks-results {

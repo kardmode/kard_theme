@@ -27,6 +27,10 @@ frappe.provide("frappe.kard_start");
 		bookmark: { tag: __("Bookmark"), icon: "star" },
 	};
 	const RESULT_LIMIT = 40;
+	// no hover on touch screens: rows keep their own ⋯ button there
+	const TOUCH = !!(window.matchMedia && window.matchMedia("(hover: none)").matches);
+	const ROW_HEIGHT = 34; // keep in sync with .ks-row min-height (used for off-screen size hints)
+	let prefetched_pins = null;
 	const PIN_METHOD = "kard_theme.kard_theme.doctype.kard_pinned_entry.kard_pinned_entry.pin_user_icon";
 
 	// Let the browser handle new-tab clicks on real hrefs.
@@ -358,6 +362,7 @@ frappe.provide("frappe.kard_start");
 							<div class="ks-list-tabs" role="tablist">
 								<button class="ks-list-tab" data-list="doctypes" role="tab">${esc(__("DocTypes"))} <span class="ks-count"></span></button>
 								<button class="ks-list-tab" data-list="reports" role="tab">${esc(__("Reports"))} <span class="ks-count"></span></button>
+								<button class="ks-list-hide" data-action="hide-lists" title="${esc(__("Hide these lists (bring them back from ⋯ Options)"))}" aria-label="${esc(__("Hide lists"))}">${icon("close", "xs")}</button>
 							</div>
 							<div class="ks-apps-list"></div>
 						</section>
@@ -493,6 +498,10 @@ frappe.provide("frappe.kard_start");
 				this.open_active(e);
 			});
 
+			if (!TOUCH) {
+				this.$el.on("mouseover", ".ks-row[data-item-key]", (e) => this.attach_actions(e.currentTarget));
+			}
+
 			this.$el.on("mousemove", "[data-result]", (e) => {
 				const i = cint(e.currentTarget.dataset.result);
 				if (i !== this.active) {
@@ -504,12 +513,16 @@ frappe.provide("frappe.kard_start");
 			this.$el.on("click", "[data-action]", (e) => {
 				e.preventDefault();
 				const action = e.currentTarget.dataset.action;
-				if (action !== "type-to-search") this.close();
+				if (action === "options") {
+					e.stopPropagation();
+					return this.show_options_menu(e.currentTarget);
+				}
+				if (action === "hide-lists") return set_pref("show_lists", false);
+				this.close();
 				if (action === "profile") frappe.set_route("Form", "User", frappe.session.user);
 				if (action === "theme") new frappe.ui.ThemeSwitcher().show();
 				if (action === "settings") frappe.set_route("Form", "Kard Theme Settings");
 				if (action === "reload") frappe.ui.toolbar.clear_cache();
-				if (action === "type-to-search") set_user_type_to_search(!user_type_to_search());
 			});
 
 			$(window).on("resize.kard_start", frappe.utils.debounce(() => this.is_open && this.position(), 100));
@@ -531,9 +544,9 @@ frappe.provide("frappe.kard_start");
 			this.set_compact(!!opts.compact && !!this.query.trim(), true);
 
 			this.position();
+			this.apply_prefs();
 			this.render_footer();
 			this.render_recent();
-			this.sync_tabs();
 			this.$el.prop("hidden", false);
 			requestAnimationFrame(() => {
 				this.$el.addClass("opened");
@@ -545,22 +558,28 @@ frappe.provide("frappe.kard_start");
 			input.focus();
 			input.setSelectionRange(input.value.length, input.value.length);
 
-			const pins = this.pins_loaded ? Promise.resolve(this.pins) : get_pins();
-			Promise.all([frappe.kard_start.get_catalogue(), get_bookmarks(), pins]).then(
-				([catalogue, bookmarks, pin_map]) => {
-					const changed = catalogue !== this.catalogue || !this.pins_loaded;
+			// draw from the cached catalogue right away; pinned items fill in when they arrive
+			Promise.all([frappe.kard_start.get_catalogue(), get_bookmarks()]).then(([catalogue, bookmarks]) => {
+				if (catalogue !== this.catalogue) {
 					this.catalogue = catalogue;
-					this.pins = pin_map;
-					this.pins_loaded = true;
-					if (changed) {
-						this.render_apps();
-						this.render_workspaces();
-					}
-					this.bookmarks = bookmarks;
-					this.render_bookmarks();
-					this.render_results();
+					this.render_apps();
+					this.render_workspaces();
 				}
-			);
+				this.bookmarks = bookmarks;
+				this.render_bookmarks();
+				this.render_results();
+			});
+			if (!this.pins_loaded && !this.pins_pending) {
+				this.pins_pending = true;
+				(prefetched_pins || get_pins()).then((map) => {
+					this.pins_pending = false;
+					this.pins = map;
+					this.pins_loaded = true;
+					this.pins_version = (this.pins_version || 0) + 1;
+					if (this.catalogue.length) this.render_apps();
+					if (this.query) this.render_results(true);
+				});
+			}
 		}
 
 		close() {
@@ -641,6 +660,7 @@ frappe.provide("frappe.kard_start");
 				.then(() => get_pins())
 				.then((map) => {
 					this.pins = map;
+					this.pins_version = (this.pins_version || 0) + 1;
 					const scroll = this.$el.find(".ks-apps").scrollTop();
 					this.render_apps();
 					this.$el.find(".ks-apps").scrollTop(scroll);
@@ -925,11 +945,22 @@ frappe.provide("frappe.kard_start");
 			const cache_key = q.toLowerCase();
 			if (!this.is_open || q.length < 2 || this.records_cache.has(cache_key)) return;
 			this.records_in_flight = true;
+			// full-text search can take seconds on a cold database: say so instead of looking stuck
+			this.records_slow = false;
+			clearTimeout(this.records_slow_timer);
+			this.records_slow_timer = setTimeout(() => {
+				if (this.records_in_flight && this.is_open && this.query.trim() === q) {
+					this.records_slow = true;
+					this.render_results(true);
+				}
+			}, 2500);
 			frappe
 				.xcall(RECORDS_METHOD, { text: q, start: 0, limit: RECORD_LIMIT })
 				.catch(() => null)
 				.then((rows) => {
 					this.records_in_flight = false;
+					this.records_slow = false;
+					clearTimeout(this.records_slow_timer);
 					if (rows) {
 						this.records_cache.set(cache_key, rows);
 						if (this.records_cache.size > 40) this.records_cache.delete(this.records_cache.keys().next().value);
@@ -955,6 +986,51 @@ frappe.provide("frappe.kard_start");
 
 		// --- rendering
 
+		// per-user options: show/hide the DocTypes & Reports lists, Search everywhere row
+		apply_prefs() {
+			const show_lists = pref("show_lists");
+			this.$el.toggleClass("ks-no-lists", !show_lists);
+			if (!show_lists && this.tab === "list") this.tab = "home";
+			if (show_lists && this.lists_stale && this.catalogue.length) this.render_apps();
+			this.sync_tabs();
+			if (this.is_open) {
+				this.render_footer();
+				if (this.query) this.render_results(true);
+			}
+		}
+
+		show_options_menu(anchor) {
+			const entries = [];
+			const actions = {};
+			const add = (id, label, name) => {
+				const on = pref(name);
+				entries.push({ id, label, on });
+				actions[id] = () => set_pref(name, !on);
+			};
+			if (type_to_search_allowed()) add("tts", __("Type anywhere to search"), "type_to_search");
+			add("lists", __("Show DocTypes & Reports lists"), "show_lists");
+			add("everywhere", __("Show \"Search everywhere\" in results"), "search_everywhere");
+
+			this.hide_menu();
+			this.menu_actions = actions;
+			this.$menu = $(`<div class="ks-menu ks-options" role="menu" aria-label="${esc(__("Start menu options"))}">
+				${entries
+					.map(
+						(m) => `<button role="menuitemcheckbox" aria-checked="${m.on ? "true" : "false"}" data-menu="${m.id}">
+							<span class="ks-check">${m.on ? icon("tick", "xs") : ""}</span>${esc(m.label)}</button>`
+					)
+					.join("")}
+			</div>`).appendTo(this.$el);
+			const box = this.$el[0].getBoundingClientRect();
+			const a = anchor.getBoundingClientRect();
+			const m = this.$menu[0].getBoundingClientRect();
+			this.$menu.css({
+				left: Math.max(8, Math.min(a.right - box.left - m.width, box.width - m.width - 8)),
+				top: Math.max(8, a.top - box.top - m.height - 6),
+			});
+			this.$menu.find("button").first().trigger("focus");
+		}
+
 		sync_tabs() {
 			this.$el.attr("data-tab", this.tab).attr("data-list", this.list_tab);
 			this.$el.find(".ks-list-tab").each((i, b) => {
@@ -970,6 +1046,11 @@ frappe.provide("frappe.kard_start");
 		}
 
 		render_apps() {
+			if (!pref("show_lists")) {
+				this.lists_stale = true; // built when they're shown again
+				return;
+			}
+			this.lists_stale = false;
 			// workspaces have their own section on the left; they stay searchable
 			const is_report = (i) => i.type === "report";
 			const all = this.catalogue.filter((i) => i.type !== "workspace");
@@ -978,26 +1059,66 @@ frappe.provide("frappe.kard_start");
 				$(b).find(".ks-count").text(counts[b.dataset.list] || "");
 			});
 			const apps = all.filter((i) => (this.list_tab === "reports" ? is_report(i) : !is_report(i)));
-			let html = "";
 
+			// One section per letter. `content-visibility: auto` (CSS) lets the browser skip
+			// layout/paint for sections that are off-screen; the size hint keeps the scrollbar right.
+			const section = (header, items, extra_class) =>
+				`<div class="ks-sec ${extra_class || ""}" style="contain-intrinsic-size: auto ${items.length * ROW_HEIGHT + 28}px">
+					${header}${items.map((item) => this.row_html(item, `data-app-key="${esc(item.key)}"`)).join("")}
+				</div>`;
+
+			let html = "";
 			const pinned = apps.filter((i) => this.pins.has(i.key));
 			if (pinned.length) {
 				pinned.sort((a, b) => (this.pins.get(b.key).is_global - this.pins.get(a.key).is_global) || a.label.localeCompare(b.label));
-				html += `<div class="ks-letter ks-letter-pinned">${icon("star", "xs")}<span>${esc(__("Pinned"))}</span></div>`;
-				pinned.forEach((item) => (html += this.row_html(item, `data-app-key="${esc(item.key)}"`)));
+				html += section(`<div class="ks-letter ks-letter-pinned">${icon("star", "xs")}<span>${esc(__("Pinned"))}</span></div>`, pinned, "ks-sec-pinned");
 			}
 
-			let letter = "";
+			const by_letter = new Map();
 			apps.forEach((item) => {
 				const first = (item.label[0] || "#").toUpperCase();
 				const L = /[A-Z]/.test(first) ? first : "#";
-				if (L !== letter) {
-					letter = L;
-					html += `<div class="ks-letter">${esc(L)}</div>`;
-				}
-				html += this.row_html(item, `data-app-key="${esc(item.key)}"`);
+				if (!by_letter.has(L)) by_letter.set(L, []);
+				by_letter.get(L).push(item);
 			});
+			by_letter.forEach((items, L) => (html += section(`<div class="ks-letter">${esc(L)}</div>`, items)));
+
 			this.$el.find(".ks-apps-list").html(html || `<div class="ks-empty">${esc(__("Nothing to show"))}</div>`);
+		}
+
+		// The + / ☆ / ⋯ buttons, built once per hovered (or keyboard-selected) row instead of
+		// on all ~1,000 rows: that was most of the panel's DOM and its slow re-renders.
+		actions_html(item) {
+			let html = "";
+			if (item.type === "doctype" && item.can_create) {
+				html += `<button class="ks-new" data-new-key="${esc(item.key)}" title="${esc(__("New {0}", [item.label]))}" aria-label="${esc(__("New {0}", [item.label]))}">${icon("add", "xs")}</button>`;
+			}
+			if (pin_args(item)) {
+				const pin = this.pins.get(item.key);
+				const title = pin ? (pin.is_global ? __("Pinned for everyone") : __("Unpin")) : __("Pin to top of the list");
+				html += `<button class="ks-star ${pin ? "on" : ""} ${pin && pin.is_global ? "global" : ""}"
+					data-pin-toggle="${esc(item.key)}" title="${esc(title)}" aria-label="${esc(title)}"
+					aria-pressed="${pin ? "true" : "false"}">${icon("star", "xs")}</button>`;
+			}
+			html += `<button class="ks-more" title="${esc(__("More"))}" aria-label="${esc(__("More options for {0}", [item.label]))}">${icon("dot-horizontal", "xs")}</button>`;
+			return html;
+		}
+
+		attach_actions(row) {
+			const key = row.dataset.itemKey;
+			if (!key || TOUCH) return;
+			if (!this.actions_el) {
+				this.actions_el = document.createElement("span");
+				this.actions_el.className = "ks-row-actions";
+			}
+			const el = this.actions_el;
+			if (el.parentNode === row && el.dataset.key === key && el.dataset.pinsVersion === String(this.pins_version || 0)) return;
+			const item = this.catalogue.find((i) => i.key === key);
+			if (!item) return;
+			el.dataset.key = key;
+			el.dataset.pinsVersion = String(this.pins_version || 0);
+			el.innerHTML = this.actions_html(item);
+			row.appendChild(el);
 		}
 
 		row_html(item, attrs, extra_class) {
@@ -1005,27 +1126,18 @@ frappe.provide("frappe.kard_start");
 			const icon_name = item.type === "workspace" && item.icon ? item.icon : info.icon;
 			const tag = info.tag ? `<span class="ks-tag">${esc(info.tag)}</span>` : "";
 			const module = item.module ? `<span class="ks-module">${esc(__(item.module))}</span>` : "";
-			const plus =
-				item.type === "doctype" && item.can_create
-					? `<button class="ks-new" data-new-key="${esc(item.key)}" title="${esc(__("New {0}", [item.label]))}" aria-label="${esc(__("New {0}", [item.label]))}">${icon("add", "xs")}</button>`
-					: "";
-			let star = "";
-			if (pin_args(item)) {
-				const pin = this.pins.get(item.key);
-				const title = pin
-					? pin.is_global
-						? __("Pinned for everyone")
-						: __("Unpin")
-					: __("Pin to top of the list");
-				star = `<button class="ks-star ${pin ? "on" : ""} ${pin && pin.is_global ? "global" : ""}"
-					data-pin-toggle="${esc(item.key)}" title="${esc(title)}" aria-label="${esc(title)}"
-					aria-pressed="${pin ? "true" : "false"}">${icon("star", "xs")}</button>`;
-			}
-			const more = `<button class="ks-more" title="${esc(__("More"))}" aria-label="${esc(__("More options for {0}", [item.label]))}">${icon("dot-horizontal", "xs")}</button>`;
+			const pin = this.pins.get(item.key);
+			const pin_mark = pin
+				? `<span class="ks-pin-mark ${pin.is_global ? "global" : ""}" title="${esc(pin.is_global ? __("Pinned for everyone") : __("Pinned"))}">${icon("star", "xs")}</span>`
+				: "";
+			// touch screens can't hover, so they keep a ⋯ (menu has New / Pin / Bookmark)
+			const more = TOUCH
+				? `<button class="ks-more" title="${esc(__("More"))}" aria-label="${esc(__("More options for {0}", [item.label]))}">${icon("dot-horizontal", "xs")}</button>`
+				: "";
 			return `<a href="${esc(frappe.kard_start.item_url(item))}" class="ks-row ${extra_class || ""}" data-item-key="${esc(item.key)}" ${attrs}>
 				<span class="ks-row-icon">${icon(icon_name)}</span>
 				<span class="ks-row-label">${esc(item.label)}</span>
-				${tag}${module}${plus}${star}${more}
+				${tag}${module}${pin_mark}${more}
 			</a>`;
 		}
 
@@ -1168,11 +1280,13 @@ frappe.provide("frappe.kard_start");
 				rows: records.filter(not_best),
 				loading: !new_match && q.length >= 2 && !rec_state && live_records(),
 				failed: !!(rec_state && this.records.failed),
+				// searched and found nothing: say so rather than dropping the section
+				empty: !new_match && q.length >= 2 && live_records() && !!rec_state && !rec_state.length && !this.records.failed,
 			};
 			const act_sec = { title: __("Actions"), rows: actions.filter(not_best) };
 			if (id_like) sections.push(rec_sec, app_sec, act_sec);
 			else sections.push(app_sec, rec_sec, act_sec);
-			sections.push({ rows: [{ kind: "everywhere", item: { label: q } }] });
+			if (pref("search_everywhere")) sections.push({ rows: [{ kind: "everywhere", item: { label: q } }] });
 			return sections;
 		}
 
@@ -1194,8 +1308,11 @@ frappe.provide("frappe.kard_start");
 			this.results = [];
 			let html = "";
 			sections.forEach((sec) => {
-				if (!sec.rows.length && !sec.loading && !sec.failed) return;
+				if (!sec.rows.length && !sec.loading && !sec.failed && !sec.empty) return;
 				if (sec.title) html += `<div class="ks-res-section">${esc(sec.title)}</div>`;
+				if (sec.empty) {
+					html += `<div class="ks-res-loading">${esc(__("No records match \"{0}\"", [q]))}</div>`;
+				}
 				if (sec.failed) {
 					html += `<div class="ks-res-loading">${esc(__("Record search didn't respond. Try again, or use Search everywhere."))}</div>`;
 				}
@@ -1204,10 +1321,14 @@ frappe.provide("frappe.kard_start");
 					html += this.result_html(r, `data-result="${i}" role="option" id="ks-result-${i}"`);
 				});
 				if (sec.loading && !sec.rows.length) {
-					html += `<div class="ks-res-loading">${esc(__("Searching records…"))}</div>`;
+					html += `<div class="ks-res-loading">${esc(
+						this.records_slow
+							? __("Still searching records… large searches can take a few seconds")
+							: __("Searching records…")
+					)}</div>`;
 				}
 			});
-			this.$el.find(".ks-results").html(html);
+			this.$el.find(".ks-results").html(html || `<div class="ks-empty">${esc(__("Nothing matches \"{0}\"", [q]))}</div>`);
 
 			// keep the highlight on the same row when records arrive, unless it was the top row
 			if (prev && this.active > 0) {
@@ -1258,6 +1379,7 @@ frappe.provide("frappe.kard_start");
 			const $rows = this.$el.find(".ks-results [data-result]");
 			$rows.removeClass("active").attr("aria-selected", "false");
 			const $a = $rows.eq(this.active).addClass("active").attr("aria-selected", "true");
+			if ($a[0]) this.attach_actions($a[0]);
 			this.$input.attr("aria-activedescendant", $a.attr("id") || "");
 			if (scroll && $a[0]) $a[0].scrollIntoView({ block: "nearest" });
 		}
@@ -1272,9 +1394,7 @@ frappe.provide("frappe.kard_start");
 				<span class="ks-footer-actions">
 					<button class="ks-icon-btn" data-action="theme" title="${esc(__("Toggle theme"))}" aria-label="${esc(__("Toggle theme"))}"><svg class="icon icon-sm" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 2a6 6 0 0 1 0 12z" fill="currentColor"/></svg></button>
 					${is_sm ? `<button class="ks-icon-btn" data-action="settings" title="${esc(__("Kard Theme Settings"))}" aria-label="${esc(__("Kard Theme Settings"))}">${icon("setting-gear")}</button>` : ""}
-					${type_to_search_allowed() ? `<button class="ks-icon-btn ks-tts ${user_type_to_search() ? "on" : ""}" data-action="type-to-search"
-						title="${esc(user_type_to_search() ? __("Type anywhere to search: on") : __("Type anywhere to search: off"))}"
-						aria-pressed="${user_type_to_search() ? "true" : "false"}" aria-label="${esc(__("Type anywhere to search"))}">${icon("keyboard")}</button>` : ""}
+					<button class="ks-icon-btn" data-action="options" title="${esc(__("Start menu options"))}" aria-label="${esc(__("Start menu options"))}" aria-haspopup="menu">${icon("dot-horizontal")}</button>
 					<button class="ks-icon-btn" data-action="reload" title="${esc(__("Reload"))}" aria-label="${esc(__("Reload"))}">${icon("refresh")}</button>
 				</span>
 			`);
@@ -1294,17 +1414,24 @@ frappe.provide("frappe.kard_start");
 	const flag = (v, dflt) => (v === undefined || v === null ? dflt : !!cint(v));
 	const replace_awesomebar = () => flag(start_cfg().replace_awesomebar, true);
 	const type_to_search_allowed = () => flag(start_cfg().type_to_search, true);
-	const user_type_to_search = () => flag(start_cfg().user_type_to_search, true);
+	// per-user options, from boot (user default, else site_config default, else on)
+	const pref = (name) => flag((start_cfg().prefs || {})[name], true);
+	const user_type_to_search = () => pref("type_to_search");
 
-	function set_user_type_to_search(on) {
-		frappe.boot.kard_start = Object.assign({}, start_cfg(), { user_type_to_search: on ? 1 : 0 });
-		frappe.xcall("kard_theme.api.set_type_to_search", { enabled: on ? 1 : 0 });
-		frappe.show_alert({
-			message: on ? __("Type anywhere to search is on") : __("Type anywhere to search is off"),
-			indicator: on ? "green" : "orange",
-		});
+	const PREF_MESSAGES = {
+		type_to_search: [__("Type anywhere to search is on"), __("Type anywhere to search is off")],
+		show_lists: [__("DocTypes & Reports lists are shown"), __("Lists hidden. Bring them back from ⋯ Options in the panel footer")],
+		search_everywhere: [__("\"Search everywhere\" is shown in results"), __("\"Search everywhere\" is hidden")],
+	};
+
+	function set_pref(name, on) {
+		const cfg = start_cfg();
+		frappe.boot.kard_start = Object.assign({}, cfg, { prefs: Object.assign({}, cfg.prefs || {}, { [name]: on ? 1 : 0 }) });
+		frappe.xcall("kard_theme.api.set_start_pref", { pref: name, enabled: on ? 1 : 0 });
+		const msg = PREF_MESSAGES[name];
+		if (msg) frappe.show_alert({ message: on ? msg[0] : msg[1], indicator: on ? "green" : "orange" });
 		const p = frappe.kard_start._panel;
-		if (p && p.is_open) p.render_footer();
+		if (p) p.apply_prefs();
 	}
 
 	// ------------------------------------------------------------------ navbar search box + Ctrl+G
@@ -1432,5 +1559,10 @@ frappe.provide("frappe.kard_start");
 		if (type_to_search_allowed()) {
 			document.addEventListener("keydown", on_type_anywhere);
 		}
+
+		// pinned items for the lists, fetched in the background like the catalogue
+		setTimeout(() => {
+			if (!prefetched_pins) prefetched_pins = get_pins();
+		}, 2000);
 	});
 })();
