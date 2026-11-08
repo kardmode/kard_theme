@@ -38,12 +38,6 @@ def get_theme_settings():
 	
 @frappe.whitelist()
 def get(module=None,workspace=None, build=False):
-	try:
-		boot = frappe.sessions.get()
-	except Exception as e:
-		boot = frappe._dict(status='failed', error = str(e))
-		print(frappe.get_traceback())
-
 	data = []
 	
 	if module and frappe.db.get_value("Module Def", module):
