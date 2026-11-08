@@ -15,13 +15,20 @@ app_license = "MIT"
 # ------------------
 
 # include js, css files in header of desk.html
-app_include_css = "/assets/kard_theme/css/kard_theme.css"
+app_include_css = [
+	"/assets/kard_theme/css/kard_theme.css",
+	"/assets/kard_theme/css/kard_start.css",
+]
 app_include_js = [
 	"/assets/kard_theme/js/kard_theme.js",
 	"/assets/kard_theme/js/folder_widget.js",
+	"/assets/kard_theme/js/kard_start.js",
+	"/assets/kard_theme/js/kard_start_panel.js",
 ]
 
 boot_session = "kard_theme.kard_theme.utils.boot_session"
+extend_bootinfo = ["kard_theme.api.extend_bootinfo"]
+after_migrate = ["kard_theme.api.clear_app_index"]
 # include js, css files in header of web template
 # web_include_css = "/assets/kard_theme/css/kard_theme.css"
 # web_include_js = "/assets/kard_theme/js/kard_theme.js"
@@ -83,6 +90,17 @@ boot_session = "kard_theme.kard_theme.utils.boot_session"
 # Document Events
 # ---------------
 # Hook on document methods and events
+
+_clear_app_index = {
+	"on_update": "kard_theme.api.clear_app_index",
+	"on_trash": "kard_theme.api.clear_app_index",
+	"after_rename": "kard_theme.api.clear_app_index",
+}
+doc_events = {
+	"DocType": _clear_app_index,
+	"Report": _clear_app_index,
+	"Page": _clear_app_index,
+}
 
 # doc_events = {
 # 	"*": {

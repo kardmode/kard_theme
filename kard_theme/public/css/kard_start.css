@@ -1,0 +1,697 @@
+/* Start menu panel (kard_start_panel.js). Uses Frappe's theme variables so it follows light/dark. */
+
+.kard-start-backdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(15, 23, 42, 0.28);
+	backdrop-filter: blur(3px);
+	-webkit-backdrop-filter: blur(3px);
+	opacity: 0;
+	pointer-events: none;
+	z-index: 1040;
+	transition: opacity 0.15s ease;
+}
+.kard-start-backdrop.opened {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+.kard-start {
+	--ks-top: 48px;
+	--ks-row-hover: var(--fg-hover-color, var(--bg-light-gray, rgba(0, 0, 0, 0.05)));
+	position: fixed;
+	top: calc(var(--ks-top) + 8px);
+	left: 50%;
+	width: min(900px, calc(100vw - 32px));
+	max-height: calc(100vh - var(--ks-top) - 24px);
+	display: flex;
+	flex-direction: column;
+	background: var(--card-bg, #fff);
+	color: var(--text-color, #1f272e);
+	border: 1px solid var(--border-color, #e2e8f0);
+	border-radius: 14px;
+	box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.08);
+	z-index: 1041;
+	overflow: hidden;
+	opacity: 0;
+	transform: translate(-50%, -6px);
+	transition: opacity 0.14s ease, transform 0.14s ease;
+}
+.kard-start.opened {
+	opacity: 1;
+	transform: translate(-50%, 0);
+}
+@media (prefers-reduced-motion: reduce) {
+	.kard-start,
+	.kard-start-backdrop {
+		transition: none;
+	}
+}
+body.kard-start-open {
+	overflow: hidden;
+}
+
+/* search */
+.kard-start .ks-search {
+	position: relative;
+	padding: 14px 16px 10px;
+	flex: none;
+}
+.kard-start .ks-search > .icon {
+	position: absolute;
+	left: 28px;
+	top: 50%;
+	transform: translateY(-25%);
+	color: var(--text-muted);
+	pointer-events: none;
+}
+.kard-start .ks-input {
+	width: 100%;
+	height: 40px;
+	padding: 0 14px 0 38px;
+	font-size: 15px;
+	border-radius: 10px;
+	border: 1px solid var(--border-color, #d1d8dd);
+	background: var(--control-bg, #f4f5f6);
+	color: var(--text-color);
+	outline: none;
+}
+.kard-start .ks-input:focus {
+	border-color: var(--primary, #2490ef);
+	background: var(--card-bg, #fff);
+	box-shadow: 0 0 0 2px rgba(36, 144, 239, 0.18);
+}
+
+.kard-start .ks-close {
+	display: none; /* phone only; desktop closes with Esc or the backdrop */
+}
+
+/* phone tabs (hidden on desktop) */
+.kard-start .ks-tabs {
+	display: none;
+	gap: 6px;
+	padding: 0 16px 8px;
+	flex: none;
+}
+.kard-start .ks-tab {
+	flex: 1;
+	padding: 6px 10px;
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	background: transparent;
+	color: var(--text-muted);
+	font-weight: 500;
+}
+.kard-start .ks-tab.active {
+	background: var(--primary, #2490ef);
+	border-color: var(--primary, #2490ef);
+	color: #fff;
+}
+
+/* body: All apps | Pinned + Recent */
+.kard-start .ks-body,
+.kard-start .ks-results {
+	height: min(600px, calc(100vh - var(--ks-top) - 150px));
+	min-height: 0;
+	border-top: 1px solid var(--border-color);
+	border-bottom: 1px solid var(--border-color);
+}
+.kard-start .ks-body {
+	display: grid;
+	grid-template-columns: 1fr 300px; /* Pinned + Recent | All apps */
+}
+.kard-start .ks-apps,
+.kard-start .ks-side,
+.kard-start .ks-results {
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+.kard-start .ks-apps {
+	border-left: 1px solid var(--border-color);
+	padding: 4px 8px 12px;
+}
+.kard-start .ks-side {
+	padding: 4px 16px 16px;
+}
+.kard-start.searching .ks-body,
+.kard-start.searching .ks-tabs {
+	display: none !important;
+}
+.kard-start .ks-results {
+	padding: 6px 8px;
+}
+
+.kard-start .ks-section-title {
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+	padding: 10px 8px 6px;
+}
+/* DocTypes | Reports switch at the top of the right column */
+.kard-start .ks-list-tabs {
+	position: sticky;
+	top: -4px;
+	z-index: 2;
+	display: flex;
+	gap: 4px;
+	margin: 0 0 2px;
+	padding: 10px 0 6px;
+	background: var(--card-bg, #fff);
+}
+.kard-start .ks-list-tab {
+	flex: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	padding: 5px 8px;
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	background: transparent;
+	color: var(--text-muted);
+	font-size: 12px;
+	font-weight: 600;
+}
+.kard-start .ks-list-tab.active {
+	background: var(--bg-color, #f4f5f6);
+	border-color: var(--text-muted);
+	color: var(--text-color);
+}
+.kard-start[data-list="reports"] .ks-apps-list .ks-tag {
+	display: none; /* every row is a report here; search results keep the tag */
+}
+.kard-start .ks-count {
+	font-weight: 400;
+	font-size: 11px;
+	color: var(--text-muted);
+}
+.kard-start .ks-letter {
+	position: sticky;
+	top: 38px;
+	z-index: 1;
+	background: var(--card-bg, #fff);
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--primary, #2490ef);
+	padding: 8px 8px 2px;
+}
+
+/* rows */
+.kard-start .ks-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-height: 34px;
+	padding: 5px 8px;
+	border-radius: 8px;
+	color: var(--text-color);
+	text-decoration: none;
+}
+.kard-start .ks-row:hover,
+.kard-start .ks-row:focus-visible,
+.kard-start .ks-row.active {
+	background: var(--ks-row-hover);
+	text-decoration: none;
+	outline: none;
+}
+.kard-start .ks-row.active {
+	box-shadow: inset 3px 0 0 var(--primary, #2490ef);
+}
+.kard-start .ks-row-icon {
+	flex: none;
+	display: inline-flex;
+	color: var(--text-muted);
+}
+.kard-start .ks-row-label {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.kard-start .ks-tag {
+	flex: none;
+	font-size: 11px;
+	padding: 1px 6px;
+	border-radius: 6px;
+	background: var(--bg-color, #f4f5f6);
+	color: var(--text-muted);
+	border: 1px solid var(--border-color);
+}
+.kard-start .ks-module {
+	flex: none;
+	max-width: 40%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 12px;
+	color: var(--text-light, var(--text-muted));
+}
+.kard-start .ks-apps .ks-module {
+	display: none; /* narrow column: label + tag only */
+}
+.kard-start .ks-new {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	padding: 0;
+	border: 1px solid var(--border-color);
+	border-radius: 6px;
+	background: var(--card-bg);
+	color: var(--text-muted);
+	opacity: 0;
+}
+.kard-start .ks-row:hover .ks-new,
+.kard-start .ks-row.active .ks-new,
+.kard-start .ks-new:focus-visible {
+	opacity: 1;
+}
+.kard-start .ks-new:hover {
+	color: var(--primary, #2490ef);
+	border-color: var(--primary, #2490ef);
+}
+@media (hover: none) {
+	.kard-start .ks-new {
+		opacity: 1;
+	}
+}
+
+/* pinned tiles */
+.kard-start .ks-group {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-color);
+	padding: 8px 8px 4px;
+}
+.kard-start .ks-tiles {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+	gap: 4px;
+	margin-bottom: 6px;
+}
+.kard-start .ks-tile {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	padding: 10px 4px 8px;
+	border-radius: 10px;
+	color: var(--text-color);
+	text-decoration: none;
+	min-width: 0;
+}
+.kard-start .ks-tile:hover,
+.kard-start .ks-tile:focus-visible {
+	background: var(--ks-row-hover);
+	text-decoration: none;
+	outline: none;
+}
+.kard-start .ks-tile-icon {
+	width: 44px;
+	height: 44px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 12px;
+	background: var(--bg-color, #f4f5f6);
+	border: 1px solid rgba(0, 0, 0, 0.06);
+	--icon-stroke: #1f272e;
+}
+.kard-start .ks-tile-label {
+	font-size: 12px;
+	line-height: 1.25;
+	text-align: center;
+	max-width: 100%;
+	overflow: hidden;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	word-break: break-word;
+}
+
+/* Bookmarks title: Edit / New group */
+.kard-start .ks-bm-title {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+.kard-start .ks-bm-tools {
+	display: inline-flex;
+	gap: 4px;
+}
+.kard-start .ks-link-btn {
+	border: none;
+	background: transparent;
+	padding: 2px 6px;
+	border-radius: 6px;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	text-transform: none;
+	color: var(--primary, #2490ef);
+}
+.kard-start .ks-link-btn:hover,
+.kard-start .ks-link-btn:focus-visible {
+	background: var(--ks-row-hover);
+	outline: none;
+}
+.kard-start .ks-bm-newgroup {
+	display: none;
+}
+.kard-start.ks-editing .ks-bm-newgroup {
+	display: inline-block;
+}
+
+/* edit mode */
+.kard-start .ks-tile {
+	position: relative;
+}
+.kard-start.ks-editing .ks-tiles {
+	min-height: 64px;
+	padding: 4px;
+	border: 1px dashed var(--border-color);
+	border-radius: 10px;
+}
+.kard-start.ks-editing .ks-tile {
+	cursor: grab;
+}
+.kard-start.ks-editing .ks-tile-icon {
+	animation: ks-wiggle 0.35s ease-in-out infinite alternate;
+}
+@keyframes ks-wiggle {
+	from { transform: rotate(-1.5deg); }
+	to { transform: rotate(1.5deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+	.kard-start.ks-editing .ks-tile-icon {
+		animation: none;
+	}
+}
+.kard-start .ks-tile-remove {
+	position: absolute;
+	top: 2px;
+	right: 10px;
+	width: 20px;
+	height: 20px;
+	padding: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid var(--border-color);
+	border-radius: 50%;
+	background: var(--card-bg, #fff);
+	color: var(--text-muted);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+.kard-start .ks-tile-remove:hover {
+	color: var(--red-500, #e24c4c);
+	border-color: var(--red-500, #e24c4c);
+}
+.kard-start .sortable-ghost {
+	opacity: 0.35;
+}
+
+/* ⋯ button on rows */
+.kard-start .ks-more {
+	flex: none;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	padding: 0;
+	border: none;
+	border-radius: 6px;
+	background: transparent;
+	color: var(--text-muted);
+}
+.kard-start .ks-row:hover .ks-more,
+.kard-start .ks-row.active .ks-more,
+.kard-start .ks-more:focus-visible {
+	display: inline-flex;
+}
+.kard-start .ks-more:hover {
+	background: var(--card-bg);
+	color: var(--text-color);
+}
+@media (hover: none) {
+	.kard-start .ks-more {
+		display: inline-flex;
+	}
+}
+
+/* item menu */
+.kard-start .ks-menu {
+	position: absolute;
+	z-index: 5;
+	min-width: 190px;
+	padding: 4px;
+	background: var(--card-bg, #fff);
+	border: 1px solid var(--border-color);
+	border-radius: 10px;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+.kard-start .ks-menu button {
+	display: block;
+	width: 100%;
+	text-align: left;
+	padding: 7px 10px;
+	border: none;
+	border-radius: 6px;
+	background: transparent;
+	color: var(--text-color);
+	font-size: 13px;
+}
+.kard-start .ks-menu button:hover,
+.kard-start .ks-menu button:focus-visible {
+	background: var(--ks-row-hover);
+	outline: none;
+}
+
+/* workspaces: compact chips under Bookmarks */
+.kard-start .ks-workspaces {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	gap: 2px 6px;
+	margin-bottom: 6px;
+}
+.kard-start .ks-chip {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	padding: 6px 8px;
+	border-radius: 8px;
+	color: var(--text-color);
+	text-decoration: none;
+}
+.kard-start .ks-chip:hover,
+.kard-start .ks-chip:focus-visible {
+	background: var(--ks-row-hover);
+	text-decoration: none;
+	outline: none;
+}
+.kard-start .ks-chip-label {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 13px;
+}
+.kard-start .ks-chip-private {
+	flex: none;
+	display: inline-flex;
+	color: var(--text-muted);
+}
+
+/* pin star in All apps rows */
+.kard-start .ks-star {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	padding: 0;
+	border: none;
+	border-radius: 6px;
+	background: transparent;
+	color: var(--text-muted);
+	opacity: 0;
+}
+.kard-start .ks-row:hover .ks-star,
+.kard-start .ks-row.active .ks-star,
+.kard-start .ks-star:focus-visible,
+.kard-start .ks-star.on {
+	opacity: 1;
+}
+.kard-start .ks-star:hover {
+	background: var(--card-bg);
+	color: #e8a33d;
+}
+.kard-start .ks-star.on .icon {
+	fill: #f2b544;
+	--icon-stroke: #e0a020;
+}
+.kard-start .ks-star.global .icon {
+	fill: #9db7d8;
+	--icon-stroke: #6f8fb8;
+}
+.kard-start .ks-letter-pinned {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	color: #d18f15;
+}
+.kard-start .ks-letter-pinned .icon {
+	margin: 0;
+	flex: none;
+	fill: #f2b544;
+	--icon-stroke: #e0a020;
+}
+@media (hover: none) {
+	.kard-start .ks-star {
+		opacity: 1;
+	}
+}
+
+.kard-start .ks-empty {
+	padding: 16px 8px;
+	color: var(--text-muted);
+	font-size: 13px;
+}
+
+/* footer */
+.kard-start .ks-footer {
+	flex: none;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 8px 12px;
+	background: var(--bg-color, #f8f8f8);
+}
+.kard-start .ks-user {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	padding: 4px 8px;
+	border-radius: 8px;
+	color: var(--text-color);
+	text-decoration: none;
+}
+.kard-start .ks-user:hover {
+	background: var(--ks-row-hover);
+	text-decoration: none;
+}
+.kard-start .ks-user-name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.kard-start .ks-footer-actions {
+	display: inline-flex;
+	gap: 2px;
+}
+.kard-start .ks-icon-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border: none;
+	border-radius: 8px;
+	background: transparent;
+	color: var(--text-muted);
+}
+.kard-start .ks-icon-btn:hover,
+.kard-start .ks-icon-btn:focus-visible {
+	background: var(--ks-row-hover);
+	color: var(--text-color);
+	outline: none;
+}
+
+/* Start button visible at all widths when the panel is on */
+body.kard-start-enabled #globalmenu,
+#kard-start-btn {
+	display: inline-flex !important;
+	align-items: center;
+	cursor: pointer;
+	margin-right: 8px;
+}
+
+/* tablet / phone: full-screen sheet with tabs */
+@media (max-width: 767px) {
+	.kard-start {
+		top: 0;
+		left: 0;
+		width: 100vw;
+		max-height: none;
+		height: 100%;
+		border-radius: 0;
+		border: none;
+		transform: translateY(8px);
+	}
+	.kard-start.opened {
+		transform: none;
+	}
+	.kard-start .ks-tabs {
+		display: flex;
+	}
+	.kard-start .ks-search {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+	.kard-start .ks-close {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex: none;
+		width: 40px;
+		height: 40px;
+		border: none;
+		border-radius: 10px;
+		background: transparent;
+		color: var(--text-muted);
+	}
+	.kard-start .ks-search > .icon {
+		transform: translateY(-50%);
+	}
+	.kard-start .ks-body,
+	.kard-start .ks-results {
+		flex: 1 1 auto;
+		height: auto;
+	}
+	.kard-start .ks-body {
+		grid-template-columns: 1fr;
+	}
+	.kard-start .ks-apps {
+		border-left: none;
+	}
+	.kard-start[data-tab="home"] .ks-apps,
+	.kard-start[data-tab="list"] .ks-side {
+		display: none;
+	}
+	/* the top tabs already switch DocTypes / Reports on phones */
+	.kard-start .ks-list-tabs {
+		display: none;
+	}
+	.kard-start .ks-tab {
+		padding: 6px 4px;
+		font-size: 13px;
+	}
+	.kard-start .ks-letter {
+		top: -4px;
+	}
+	.kard-start .ks-module {
+		display: none;
+	}
+}

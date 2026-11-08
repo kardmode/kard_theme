@@ -346,6 +346,12 @@ $.extend(frappe.desktop, {
 		}
 
 		function openSidebar() {
+			// Start menu replaces this drawer when enabled (kard_start_panel.js)
+			if (frappe.kard_start && frappe.kard_start.is_enabled && frappe.kard_start.is_enabled()) {
+				frappe.kard_start.toggle();
+				return;
+			}
+
 			let route = frappe.get_route();
 			if (!route) {
 				return;
