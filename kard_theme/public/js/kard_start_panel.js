@@ -196,6 +196,72 @@ frappe.provide("frappe.kard_start");
 	const looks_like_id = (q) => /\d/.test(q); // "sinv 42", "SO-0001": records first
 	const NEW_PREFIX = /^(new\s+|\+\s*)/i;
 
+	// Search providers: other apps can tune search without kard_theme depending on them.
+	//   (frappe.kard_start_providers = frappe.kard_start_providers || []).push({
+	//     name,
+	//     aliases(q)            -> names (DocType / Report / Page / Workspace) that q is a shortcut for
+	//     filter_actions(a, ctx) -> the "New X" actions to show (ctx: {query, new_prefixed})
+	//     live_records()        -> false to skip record search while typing
+	//   })
+	// Load order doesn't matter; providers are read on every search.
+	const providers = () => frappe.kard_start_providers || [];
+
+	function call_providers(method, fallback, ...args) {
+		let out = fallback;
+		providers().forEach((pr) => {
+			if (typeof pr[method] !== "function") return;
+			try {
+				out = method === "filter_actions" ? pr[method](out, ...args) || [] : pr[method](...args);
+			} catch (e) {
+				console.warn(`kard_start provider ${pr.name || ""}.${method} failed`, e);
+			}
+		});
+		return out;
+	}
+
+	function alias_targets(q) {
+		const out = new Set();
+		providers().forEach((pr) => {
+			if (typeof pr.aliases !== "function") return;
+			try {
+				(pr.aliases(q) || []).forEach((t) => out.add(String(t).toLowerCase()));
+			} catch (e) {
+				console.warn(`kard_start provider ${pr.name || ""}.aliases failed`, e);
+			}
+		});
+		return out;
+	}
+
+	const live_records = () =>
+		providers().every((pr) => {
+			try {
+				return typeof pr.live_records !== "function" || pr.live_records() !== false;
+			} catch (e) {
+				return true;
+			}
+		});
+
+	// Global search content is "Label : value ||| Label : value"; show the first couple of
+	// fields that aren't just the ID / title again (same idea as mrp's awesomebar snippet).
+	function record_snippet(r) {
+		if (!r.content) return "";
+		// skip the ID / title again, and repeats ("Customer : X ||| Customer Name : X")
+		const seen = new Set([String(r.name || "").toLowerCase(), String(r.title || "").toLowerCase()]);
+		return String(r.content)
+			.split(" ||| ")
+			.map((part) => part.trim())
+			.filter((part) => {
+				if (!part || part.startsWith("ID : ") || part.startsWith("Title : ")) return false;
+				const value = part.includes(" : ") ? part.split(" : ").slice(1).join(" : ").trim().toLowerCase() : part.toLowerCase();
+				if (!value || seen.has(value)) return false;
+				seen.add(value);
+				return true;
+			})
+			.slice(0, 2)
+			.join(" · ")
+			.slice(0, 110);
+	}
+
 	function score(label, name, q) {
 		const l = label.toLowerCase();
 		const n = (name || "").toLowerCase();
@@ -212,13 +278,16 @@ frappe.provide("frappe.kard_start");
 	function search_local(items, bookmarks, pins, query) {
 		const q = query.trim().toLowerCase();
 		if (!q) return [];
+		const aliased = alias_targets(q);
 		const results = [];
 		bookmarks.forEach((b) => {
 			const s = score(b.label, b.link_to, q);
 			if (s) results.push({ s: s + 15, kind: "bookmark", item: b });
 		});
 		items.forEach((it) => {
-			let s = score(it.label, it.name, q);
+			// an alias ("gl", "si") is an exact shortcut: put its targets on top
+			const alias_hit = aliased.has(String(it.name).toLowerCase()) || aliased.has(String(it.label).toLowerCase());
+			let s = alias_hit ? 120 : score(it.label, it.name, q);
 			if (!s) return;
 			if (pins.has(it.key)) s += 10;
 			if (it.type === "workspace") s += 5;
@@ -833,7 +902,7 @@ frappe.provide("frappe.kard_start");
 		// while one runs, only the latest query waits its turn instead of stacking up.
 		request_records(q) {
 			this.records_cache = this.records_cache || new Map();
-			if (q.length < 2 || NEW_PREFIX.test(q)) {
+			if (q.length < 2 || NEW_PREFIX.test(q) || !live_records()) {
 				this.records = { q, rows: [] };
 				this.records_loading = false;
 				return;
@@ -1069,10 +1138,14 @@ frappe.provide("frappe.kard_start");
 			const local = app_q ? search_local(this.catalogue, this.bookmarks, this.pins, app_q) : [];
 
 			// Actions: "New X" for the best-matching creatable doctypes
-			const actions = local
-				.filter((r) => r.kind === "app" && r.item.type === "doctype" && r.item.can_create && (new_match || r.s >= 60))
-				.slice(0, new_match ? 5 : 2)
-				.map((r) => ({ kind: "action", item: r.item, s: r.s }));
+			const actions = call_providers(
+				"filter_actions",
+				local
+					.filter((r) => r.kind === "app" && r.item.type === "doctype" && r.item.can_create && (new_match || r.s >= 60))
+					.slice(0, new_match ? 5 : 2)
+					.map((r) => ({ kind: "action", item: r.item, s: r.s })),
+				{ query: q, new_prefixed: !!new_match }
+			);
 
 			const apps = new_match ? [] : local.slice(0, APP_LIMIT);
 			const rec_state = this.records && this.records.q === q ? this.records.rows : null;
@@ -1093,7 +1166,7 @@ frappe.provide("frappe.kard_start");
 			const rec_sec = {
 				title: __("Records"),
 				rows: records.filter(not_best),
-				loading: !new_match && q.length >= 2 && !rec_state,
+				loading: !new_match && q.length >= 2 && !rec_state && live_records(),
 				failed: !!(rec_state && this.records.failed),
 			};
 			const act_sec = { title: __("Actions"), rows: actions.filter(not_best) };
@@ -1156,9 +1229,13 @@ frappe.provide("frappe.kard_start");
 			if (r.kind === "record") {
 				const d = r.item;
 				const title = d.title && d.title !== d.name ? d.title : "";
+				const snippet = record_snippet(d);
 				return `<a href="${esc(route_url(record_route(d)))}" class="ks-row ks-record" ${attrs}>
 					<span class="ks-row-icon">${icon("file")}</span>
-					<span class="ks-row-label">${esc(d.name)}${title ? `<span class="ks-record-title"> · ${esc(title)}</span>` : ""}</span>
+					<span class="ks-row-text">
+						<span class="ks-row-label">${esc(d.name)}${title ? `<span class="ks-record-title"> · ${esc(title)}</span>` : ""}</span>
+						${snippet ? `<span class="ks-snippet">${esc(snippet)}</span>` : ""}
+					</span>
 					<span class="ks-module">${esc(__(d.doctype))}</span>
 				</a>`;
 			}
